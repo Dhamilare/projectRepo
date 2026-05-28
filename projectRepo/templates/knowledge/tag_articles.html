@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Label: #{{ tag.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <div class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs flex items-center justify-between">
+        <div class="space-y-1">
+            <span class="text-4xs font-extrabold uppercase tracking-widest text-slate-400">Relational Index Key</span>
+            <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 flex items-center">
+                <span class="inline-block w-2.5 h-2.5 rounded-full mr-2.5" style="background-color: {{ tag.color_hex|default:'#6B7280' }}"></span>
+                #{{ tag.name }}
+            </h1>
+        </div>
+        <span class="text-3xs font-extrabold uppercase tracking-widest px-3 py-1 bg-slate-100 border text-slate-600 rounded-full font-sans shadow-3xs">{{ tag.usage_count }} Articles Indexed</span>
+    </div>
+
+    <div class="space-y-3">
+        <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">Tagged Repository Operational Documents</h3>
+        
+        {% for article in page_obj %}
+        <div class="bg-white border border-slate-200/60 p-4 rounded-xl shadow-3xs flex items-center justify-between hover:shadow-2xs group transition-all">
+            <div class="space-y-1 max-w-2xl">
+                <div class="flex items-center space-x-2">
+                    <span class="text-4xs font-extrabold uppercase tracking-widest text-white px-2 py-0.5 rounded shadow-3xs" style="background-color: {{ article.category.color_hex }}">{{ article.category.name }}</span>
+                    <span class="text-4xs font-bold px-2 py-0.5 rounded border uppercase tracking-wider {% if article.article_type == 'support' %}bg-amber-50 text-amber-700{% else %}bg-blue-50 text-blue-700{% endif %}">{{ article.get_article_type_display }}</span>
+                </div>
+                <a href="{{ article.get_absolute_url }}" class="block text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors pt-0.5">
+                    {{ article.title }}
+                </a>
+                <p class="text-xs text-slate-400 font-normal truncate max-w-xl">{{ article.summary|default:"No summaries stored details logged." }}</p>
+            </div>
+            
+            <div class="text-right text-3xs font-sans text-slate-400 hidden sm:block font-medium">
+                <p class="text-slate-700 font-bold">{{ article.author.full_name }}</p>
+                <p class="mt-0.5">Updated {{ article.updated_at|date:"M d, Y" }}</p>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-16 border border-dashed border-slate-200 rounded-xl bg-white text-xs font-medium text-slate-400">
+            No active published entries currently map onto this metadata selector profile line.
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

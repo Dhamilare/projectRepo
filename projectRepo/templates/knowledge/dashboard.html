@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Operations Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-8" x-data="{ activeTab: 'all' }">
+    
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Welcome back, {{ request.user.first_name }}</h1>
+            <p class="text-xs text-slate-500 font-normal mt-0.5">MSP Central Repository Network Analytics Overview</p>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+            <a href="{% url 'article_list' %}" class="inline-flex items-center px-4 py-2.5 bg-white border border-slate-200 text-xs font-bold text-slate-700 rounded-lg hover:bg-slate-50 shadow-2xs transition-all">
+                Browse All Documents
+            </a>
+            <a href="{% url 'article_create' %}?type=support" class="inline-flex items-center px-4 py-2.5 bg-blue-600 text-xs font-bold text-white rounded-lg hover:bg-blue-700 shadow-sm shadow-blue-100 transition-all active:scale-[0.98]">
+                <svg class="w-3.5 h-3.5 mr-1.5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                Create Article
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs flex items-center justify-between cursor-pointer hover:border-amber-400 transition-all duration-200" @click="activeTab = 'support'">
+            <div class="space-y-1">
+                <p class="text-3xs uppercase tracking-widest text-slate-400 font-extrabold">Support Resolutions</p>
+                <p class="text-2xl font-black text-slate-900">{{ stats.total_support }}</p>
+            </div>
+            <div class="h-10 w-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
+                <svg class="w-5 h-5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.83-5.83m0 0a8.91 8.91 0 01-12.074-12.074A8.91 8.91 0 008 17a8.91 8.91 0 007.17-3.66z" /></svg>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs flex items-center justify-between cursor-pointer hover:border-blue-400 transition-all duration-200" @click="activeTab = 'project'">
+            <div class="space-y-1">
+                <p class="text-3xs uppercase tracking-widest text-slate-400 font-extrabold">Project Playbooks</p>
+                <p class="text-2xl font-black text-slate-900">{{ stats.total_project }}</p>
+            </div>
+            <div class="h-10 w-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                <svg class="w-5 h-5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 2.24a4.5 4.5 0 112.83 0M12 18.75m-2.25 0a2.25 2.25 0 114.5 0 2.25 2.25 0 01-4.5 0z" /></svg>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs flex items-center justify-between cursor-pointer hover:border-purple-400 transition-all duration-200" @click="activeTab = 'software'">
+            <div class="space-y-1">
+                <p class="text-3xs uppercase tracking-widest text-slate-400 font-extrabold">Software Guides</p>
+                <p class="text-2xl font-black text-slate-900">{{ stats.total_software }}</p>
+            </div>
+            <div class="h-10 w-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
+                <svg class="w-5 h-5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" /></svg>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs flex items-center justify-between cursor-default transition-all duration-200">
+            <div class="space-y-1">
+                <p class="text-3xs uppercase tracking-widest text-slate-400 font-extrabold">My Personal Drafts</p>
+                <p class="text-2xl font-black text-slate-900">{{ stats.my_drafts }}</p>
+            </div>
+            <div class="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500">
+                <svg class="w-5 h-5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="lg:col-span-2 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-200/80 pb-3">
+                <div class="flex items-center space-x-2">
+                    <h2 class="text-sm font-black text-slate-900 uppercase tracking-tight">Recent Documentation Assets</h2>
+                    <span class="text-3xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold" x-text="activeTab"></span>
+                </div>
+                
+                <div class="flex items-center space-x-1 bg-slate-200/60 p-0.5 rounded-lg text-3xs font-bold">
+                    <button @click="activeTab = 'all'" :class="activeTab === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'" class="px-2.5 py-1 rounded-md transition-all">All</button>
+                    <button @click="activeTab = 'support'" :class="activeTab === 'support' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'" class="px-2.5 py-1 rounded-md transition-all">Support</button>
+                    <button @click="activeTab = 'project'" :class="activeTab === 'project' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'" class="px-2.5 py-1 rounded-md transition-all">Projects</button>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                {% for article in recent_articles %}
+                <div x-show="activeTab === 'all' || activeTab === '{{ article.article_type }}'"
+                     x-transition.duration.200ms
+                     class="bg-white border border-slate-200/60 p-4 rounded-xl shadow-3xs flex flex-col sm:flex-row sm:items-center sm:justify-between hover:shadow-2xs transition-all duration-200 group relative">
+                    
+                    <div class="space-y-1 max-w-xl">
+                        <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+                            <span class="text-4xs font-extrabold uppercase tracking-widest text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded">
+                                {{ article.category.name }}
+                            </span>
+                            <span class="text-4xs font-bold px-2 py-0.5 rounded {% if article.article_type == 'support' %}bg-amber-50 text-amber-700{% elif article.article_type == 'project' %}bg-blue-50 text-blue-700{% else %}bg-purple-50 text-purple-700{% endif %} font-sans uppercase tracking-wider">
+                                {{ article.get_article_type_display }}
+                            </span>
+                        </div>
+                        
+                        <a href="{{ article.get_absolute_url }}" class="block text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors pt-0.5">
+                            {{ article.title }}
+                        </a>
+                        <p class="text-xs text-slate-400 font-normal truncate line-clamp-1 max-w-md">{{ article.summary|default:"No description provided." }}</p>
+                    </div>
+
+                    <div class="mt-4 sm:mt-0 flex items-center space-x-4 shrink-0 text-right text-3xs text-slate-400 font-medium">
+                        <div class="hidden sm:block">
+                            <p class="text-slate-600 font-bold">{{ article.author.first_name }} {{ article.author.last_name }}</p>
+                            <p class="mt-0.5">{{ article.published_at|date:"M d, Y" }}</p>
+                        </div>
+                        <div class="flex items-center space-x-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            <span class="font-bold text-slate-700">{{ article.views_count }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-12 border border-dashed border-slate-200 rounded-xl bg-white">
+                    <p class="text-xs text-slate-400 font-medium">No published documentation assets found in this workspace filter view.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            
+            <div class="bg-white border border-slate-200/60 rounded-xl p-5 shadow-2xs space-y-4">
+                <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">Trending Resolutions</h3>
+                <div class="space-y-3">
+                    {% for pop in popular_articles %}
+                    <a href="{{ pop.get_absolute_url }}" class="block group space-y-0.5">
+                        <span class="text-4xs uppercase font-extrabold tracking-widest text-slate-400">{{ pop.category.name }}</span>
+                        <h4 class="text-xs font-bold text-slate-700 group-hover:text-blue-600 transition-colors truncate">{{ pop.title }}</h4>
+                        <span class="inline-flex items-center text-3xs text-slate-400 font-medium">
+                            <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                            {{ pop.views_count }} engineering clicks
+                        </span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200/60 rounded-xl p-5 shadow-2xs space-y-4">
+                <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">Active Taxonomy Roots</h3>
+                <div class="space-y-2">
+                    {% for cat in categories %}
+                    <a href="{% url 'category_detail' cat.slug %}" class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-2 h-2 rounded-full" style="background-color: {{ cat.color_hex|default:'#2563EB' }}"></div>
+                            <span class="text-xs font-bold text-slate-700 group-hover:text-slate-900 transition-colors">{{ cat.name }}</span>
+                        </div>
+                        <span class="text-3xs bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
+                            {{ cat.pub_count }} logs
+                        </span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

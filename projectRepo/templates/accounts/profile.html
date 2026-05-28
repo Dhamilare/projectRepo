@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    
+    <div class="bg-white border border-slate-200/60 p-6 md:p-8 rounded-xl shadow-2xs flex flex-col md:flex-row md:items-center md:justify-between gap-6 relative overflow-hidden">
+        <div class="flex items-center space-x-5">
+            <div class="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-black text-xl flex items-center justify-center shadow-md shadow-blue-100 border-2 border-white select-none shrink-0">
+                {{ request.user.initials }}
+            </div>
+            <div class="space-y-1 min-w-0">
+                <h1 class="text-xl font-black text-slate-900 leading-none flex items-center">
+                    {{ request.user.full_name }}
+                </h1>
+                <p class="text-xs font-bold text-blue-600 font-sans tracking-wide">{{ request.user.job_title|default:"Systems Engineer" }} <span class="text-slate-300 mx-1.5">|</span> <span class="text-slate-400 font-medium font-sans uppercase tracking-wider text-2xs">{{ request.user.department|default:"Infrastructure Ops" }}</span></p>
+                <p class="text-3xs font-mono text-slate-400 pt-0.5 truncate max-w-xs md:max-w-md">{{ request.user.email }}</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-8 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100 text-center text-xs shrink-0 font-sans">
+            <div><p class="text-4xs uppercase tracking-widest text-slate-400 font-extrabold">Auth Role Attribute</p><p class="font-black text-slate-800 uppercase tracking-wider text-2xs bg-slate-100 border px-2 py-0.5 rounded mt-1">{{ request.user.get_role_display }}</p></div>
+            <div><p class="text-4xs uppercase tracking-widest text-slate-400 font-extrabold">Auth Sessions</p><p class="text-xl font-black text-slate-900 mt-0.5">{{ request.user.login_count }}</p></div>
+            <div><p class="text-4xs uppercase tracking-widest text-slate-400 font-extrabold">Vault Builds</p><p class="text-xl font-black text-slate-900 mt-0.5">{{ total_articles }}</p></div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs space-y-4 text-xs">
+            <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b pb-2">Microsoft Entra Identity Synchronizations</h3>
+            
+            <div class="space-y-3 font-sans font-medium text-slate-600">
+                <div class="space-y-0.5"><p class="text-4xs uppercase tracking-wider text-slate-400 font-extrabold">Azure Active Catalog Object ID (OID)</p><p class="font-mono font-bold text-slate-800 break-all select-all text-2xs">{{ request.user.azure_object_id|default:"Manually Synced Local Profile" }}</p></div>
+                <div class="space-y-0.5"><p class="text-4xs uppercase tracking-wider text-slate-400 font-extrabold">Azure Active Catalog Tenant ID (TID)</p><p class="font-mono font-bold text-slate-800 break-all select-all text-2xs">{{ request.user.azure_tenant_id|default:"N/A" }}</p></div>
+                <div class="space-y-0.5"><p class="text-4xs uppercase tracking-wider text-slate-400 font-extrabold">Corporate Phone Node Mapping</p><p class="font-bold text-slate-800">{{ request.user.phone|default:"Unassigned" }}</p></div>
+                <div class="space-y-0.5"><p class="text-4xs uppercase tracking-wider text-slate-400 font-extrabold">Session Trace IP Connection Handshake</p><p class="font-mono font-bold text-slate-800">{{ request.user.last_login_ip|default:"127.0.0.1" }}</p></div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2 space-y-4">
+            <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">My Recent Repository Asset Commit Records</h3>
+            
+            <div class="space-y-3">
+                {% for art in authored_articles %}
+                <div class="bg-white border border-slate-200/60 p-4 rounded-xl shadow-3xs flex items-center justify-between hover:shadow-2xs transition-all group relative">
+                    <div class="space-y-1 overflow-hidden pr-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-4xs font-extrabold uppercase tracking-widest text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded">{{ art.category.name }}</span>
+                            <span class="text-4xs font-bold px-2 py-0.5 rounded border uppercase tracking-wider {% if art.article_type == 'support' %}bg-amber-50 text-amber-700{% else %}bg-blue-50 text-blue-700{% endif %}">{{ art.get_article_type_display }}</span>
+                        </div>
+                        <a href="{{ art.get_absolute_url }}" class="block text-xs font-bold text-slate-700 group-hover:text-blue-600 transition-colors truncate max-w-md pt-0.5">{{ art.title }}</a>
+                        <p class="text-3xs text-slate-400 font-medium font-sans">Latest synchronization save executed on {{ art.updated_at|date:"M d, Y" }}</p>
+                    </div>
+                    
+                    <div class="flex items-center space-x-1.5 bg-slate-50 border px-2 py-1 rounded-md text-3xs font-bold text-slate-700 shrink-0 select-none">
+                        <span>{{ art.views_count }} views</span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-12 border border-dashed border-slate-200 rounded-xl bg-white text-xs font-medium text-slate-400">
+                    You haven't authored or committed any structural documentation assets to the central registry vault.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

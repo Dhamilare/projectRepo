@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Knowledge Base Repository{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ currentType: '{{ article_type|default:'all' }}' }">
+    
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 border-b border-slate-200 pb-4">
+        <div>
+            <h1 class="text-xl font-black text-slate-900 uppercase tracking-tight">Technical Asset Logs</h1>
+            <p class="text-xs text-slate-400">Reviewing {{ total_results }} peer-verified technical operational records</p>
+        </div>
+        <div class="flex items-center space-x-2 bg-slate-200/60 p-0.5 rounded-lg text-xs font-bold text-slate-600">
+            <a href="?type=" :class="currentType === 'all' ? 'bg-white text-slate-900 shadow-2xs' : ''" class="px-3 py-1.5 rounded-md transition-all">All Records</a>
+            <a href="?type=support" :class="currentType === 'support' ? 'bg-white text-slate-900 shadow-2xs' : ''" class="px-3 py-1.5 rounded-md transition-all">Support Fixes</a>
+            <a href="?type=project" :class="currentType === 'project' ? 'bg-white text-slate-900 shadow-2xs' : ''" class="px-3 py-1.5 rounded-md transition-all">Playbooks</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        
+        <div class="space-y-6">
+            <form method="GET" action="{% url 'article_list' %}" class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs space-y-4">
+                <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">Refine Filter Parameters</h3>
+                
+                {% if article_type %}<input type="hidden" name="type" value="{{ article_type }}">{% endif %}
+                
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Taxonomy Category</label>
+                    {{ form.category }}
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Incident Severity</label>
+                    {{ form.severity }}
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Sort Telemetry</label>
+                    {{ form.sort }}
+                </div>
+
+                <button type="submit" class="w-full py-2 bg-slate-800 text-white font-bold rounded-lg text-xs hover:bg-slate-900 transition-all shadow-sm">
+                    Apply Parameters
+                </button>
+            </form>
+
+            <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs space-y-3">
+                <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">Popular Labels</h3>
+                <div class="flex flex-wrap gap-1.5">
+                    {% for tag in popular_tags %}
+                    <a href="{% url 'tag_articles' tag.slug %}" class="text-3xs font-bold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md hover:bg-blue-50 hover:text-blue-700 border border-slate-200/40 transition-colors">
+                        #{{ tag.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-3 space-y-3">
+            {% for article in page_obj %}
+            <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-3xs flex flex-col sm:flex-row sm:items-center sm:justify-between hover:shadow-2xs border-l-4 group transition-all"
+                 style="border-l-color: {{ article.category.color_hex|default:'#2563EB' }}">
+                <div class="space-y-1 max-w-xl">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-4xs font-extrabold uppercase tracking-widest text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded">
+                            {{ article.category.name }}
+                        </span>
+                        <span class="text-4xs font-bold px-2 py-0.5 rounded uppercase tracking-wider {% if article.article_type == 'support' %}bg-amber-50 text-amber-700{% elif article.article_type == 'project' %}bg-blue-50 text-blue-700{% else %}bg-purple-50 text-purple-700{% endif %}">
+                            {{ article.get_article_type_display }}
+                        </span>
+                        {% if article.error_codes %}
+                        <span class="text-4xs font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200/40">{{ article.error_codes }}</span>
+                        {% endif %}
+                    </div>
+                    <a href="{{ article.get_absolute_url }}" class="block text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors pt-0.5">
+                        {{ article.title }}
+                    </a>
+                    <p class="text-xs text-slate-400 font-normal line-clamp-2 max-w-xl leading-relaxed">{{ article.summary|default:"No structural details provided." }}</p>
+                </div>
+
+                <div class="mt-4 sm:mt-0 flex items-center space-x-4 shrink-0 text-right text-3xs text-slate-400 font-medium">
+                    <div class="hidden sm:block">
+                        <p class="text-slate-700 font-bold">{{ article.author.full_name }}</p>
+                        <p class="mt-0.5">{{ article.updated_at|date:"M d, Y" }}</p>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-bold text-center shrink-0">
+                        {{ article.views_count }} views
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-16 border border-dashed border-slate-200 rounded-xl bg-white space-y-2">
+                <p class="text-sm font-bold text-slate-700">No Articles Match Active Filter</p>
+                <p class="text-xs text-slate-400 max-w-xs mx-auto">Try clearing adjustments or run a wide-scope search lookup sequence above.</p>
+            </div>
+            {% endfor %}
+
+            {% if page_obj.has_other_pages %}
+            <div class="flex items-center justify-between border-t border-slate-200/80 pt-6 mt-6 text-xs font-bold text-slate-600">
+                <div>
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if article_type %}&type={{ article_type }}{% endif %}" class="px-3 py-1.5 bg-white border rounded-lg hover:bg-slate-50">Back</a>
+                    {% endif %}
+                </div>
+                <span class="font-normal text-slate-400">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                <div>
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if article_type %}&type={{ article_type }}{% endif %}" class="px-3 py-1.5 bg-white border rounded-lg hover:bg-slate-50">Next</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

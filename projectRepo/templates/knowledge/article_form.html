@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_create %}Build Documentation Asset{% else %}Revise {{ article.title }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto" 
+     x-data="{ 
+        docType: '{{ form.article_type.value|default:'support' }}',
+        categories: {{ categories_json|safe }},
+        get filteredCategories() {
+            return this.categories.filter(c => c.category_type === this.docType || c.category_type === 'general');
+        }
+     }">
+    
+    <div class="border-b border-slate-200 pb-4 mb-6">
+        <h1 class="text-xl font-black text-slate-900 uppercase tracking-tight">{% if is_create %}Commit New Knowledge Asset Node{% else %}Modify Target Operational Playbook{% endif %}</h1>
+        <p class="text-xs text-slate-400">Map precise engineering diagnostic paths across internal organizational frameworks.</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs space-y-4">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b pb-2">Core Parameter Profiles</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1 md:col-span-2">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Document Headline / Title Title</label>
+                    {{ form.title }}
+                    {% if form.title.errors %}<p class="text-3xs font-bold text-red-600">{{ form.title.errors.0 }}</p>{% endif %}
+                </div>
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Documentation Type Classification</label>
+                    <select name="article_type" id="id_article_type" x-model="docType" class="w-full px-4 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 text-sm font-sans">
+                        {% for val, label in form.fields.article_type.choices %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Taxonomy Category Group Node</label>
+                    <select name="category" class="w-full px-4 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 text-sm font-sans">
+                        <template x-for="cat in filteredCategories" :key="cat.id">
+                            <option :value="cat.id" :selected="cat.id == '{{ form.category.value|default:'' }}'" x-text="cat.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="space-y-1 md:col-span-2">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Tag Labels Matrix</label>
+                    {{ form.tag_names }}
+                    <p class="text-4xs text-slate-400 font-medium">Split entries with commas, e.g. Exchange, Hybrid Connect, MFA</p>
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Brief Listing Summary</label>
+                {{ form.summary }}
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Detailed Analysis Body Content Narrative (HTML/Rich Input Allowed)</label>
+                {{ form.content }}
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Boost Search Keyword Modifiers</label>
+                {{ form.search_keywords }}
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs space-y-4 transition-all duration-300"
+             x-show="docType === 'support'" x-transition:enter.duration.250ms style="display: none;">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-amber-600 border-b pb-2 flex items-center">
+                <span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>
+                Support Incident Telemetry Fields
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Incident Priority Severity</label>
+                    {{ form.severity }}
+                </div>
+                <div class="space-y-1 md:col-span-2">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Target Affected Infrastructure Platforms</label>
+                    {{ form.affected_systems }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Diagnostic Fault Error Codes</label>
+                    {{ form.error_codes }}
+                </div>
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Microsoft System Products Line</label>
+                    {{ form.microsoft_products }}
+                </div>
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Mean Time To Close Resolution (Minutes)</label>
+                    {{ form.time_to_resolve_minutes }}
+                </div>
+            </div>
+            <div class="space-y-1">
+                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Resolution Classification Category Type</label>
+                {{ form.resolution_type }}
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs space-y-4 transition-all duration-300"
+             x-show="docType === 'project'" x-transition:enter.duration.250ms style="display: none;">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-blue-600 border-b pb-2 flex items-center">
+                <span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+                Project Deployment Environment Design Parameters
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Project Type Scope</label>{{ form.project_type }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Engineering Technology Stack</label>{{ form.tech_stack }}</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Complexity Matrix Level</label>{{ form.difficulty_level }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Estimated Project Execution Duration</label>{{ form.estimated_duration }}</div>
+            </div>
+            <div class="space-y-1">
+                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Administrative Pre-Requisites Specifications</label>
+                {{ form.prerequisites }}
+            </div>
+
+            <div class="pt-4 space-y-4 border-t border-slate-100">
+                <h3 class="text-3xs uppercase tracking-widest font-extrabold text-slate-400">Sequential Execution Phases Builder</h3>
+                {{ step_formset.management_form }}
+                
+                <div class="space-y-4">
+                    {% for s_form in step_formset %}
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 relative">
+                        {{ s_form.id }}{{ s_form.step_number }}
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="space-y-1 md:col-span-2"><label class="text-3xs font-bold text-slate-500">Phase Title</label>{{ s_form.title }}</div>
+                            <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Est. Minutes</label>{{ s_form.estimated_minutes }}</div>
+                        </div>
+                        <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Task Execution Instruction Content</label>{{ s_form.description }}</div>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="space-y-1 md:col-span-3"><label class="text-3xs font-bold text-slate-500">PowerShell / CLI Commands Block</label>{{ s_form.code_snippet }}</div>
+                            <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Syntax Format</label>{{ s_form.code_language }}</div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1"><label class="text-3xs font-bold text-red-600">Production Warning Flags</label>{{ s_form.warning }}</div>
+                            <div class="space-y-1"><label class="text-3xs font-bold text-blue-600">Pro Shortcut Tips</label>{{ s_form.tip }}</div>
+                        </div>
+                        <div class="flex items-center space-x-2 text-3xs font-bold text-slate-500 pt-1">
+                            {{ s_form.is_optional }} <label for="{{ s_form.is_optional.id_for_label }}">Mark as optional phase node component</label>
+                            {% if step_formset.can_delete %}<div class="ml-auto flex items-center space-x-1 text-red-600">{{ s_form.DELETE }} <span>Purge Step</span></div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs space-y-4">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b pb-2">Governance Visibility & Review Controls</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Workflow Publish Status</label>{{ form.status }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Security Clearance Scope Boundary</label>{{ form.visibility }}</div>
+            </div>
+            
+            <div class="flex flex-wrap gap-4 pt-2 text-3xs font-bold text-slate-600 uppercase tracking-wider">
+                <div class="flex items-center space-x-1.5">{{ form.is_featured }} <label>Curation Highlight Feature</label></div>
+                <div class="flex items-center space-x-1.5">{{ form.is_pinned }} <label>Pin to Top Dashboards</label></div>
+                <div class="flex items-center space-x-1.5">{{ form.needs_review }} <label>Flag for Senior Governance Review</label></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Collaborating Contributors</label>{{ form.contributors }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Cross-Referenced Related Articles</label>{{ form.related_articles }}</div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 border-t border-slate-200 pt-4">
+            <a href="{% url 'dashboard' %}" class="px-4 py-2.5 border rounded-lg font-bold text-slate-700 hover:bg-slate-50 transition-colors text-xs">Cancel Changes</a>
+            <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg text-xs hover:bg-blue-700 shadow-sm shadow-blue-100 transition-all active:scale-[0.99]">
+                Commit Asset Entry to Vault
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

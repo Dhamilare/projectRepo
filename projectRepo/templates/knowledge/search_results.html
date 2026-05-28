@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Lookup Results{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs space-y-4">
+        <div>
+            <h1 class="text-lg font-black text-slate-900 uppercase tracking-tight">System Repository Search Engine</h1>
+            <p class="text-xs text-slate-400">Deep scanning across content blocks, code fragments, diagnostic errors and products lines.</p>
+        </div>
+
+        <form method="GET" action="{% url 'search' %}" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div class="md:col-span-4 flex items-center relative">
+                <input type="search" name="q" value="{{ query }}" placeholder="Type symptom, error, script or setup blueprint terms..." class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:bg-white text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none transition-all font-sans font-bold shadow-inner">
+                <button type="submit" class="absolute right-2 px-4 py-1.5 bg-slate-800 text-white font-extrabold text-xs rounded-lg hover:bg-slate-900 transition-all shadow-sm">Execute Scan</button>
+            </div>
+            
+            <div class="space-y-0.5"><label class="text-4xs font-black uppercase tracking-wider text-slate-400">Doc Focus Type</label>{{ form.article_type }}</div>
+            <div class="space-y-0.5"><label class="text-4xs font-black uppercase tracking-wider text-slate-400">Taxonomy Folders</label>{{ form.category }}</div>
+            <div class="space-y-0.5"><label class="text-4xs font-black uppercase tracking-wider text-slate-400">Incident Severity</label>{{ form.severity }}</div>
+            <div class="space-y-0.5"><label class="text-4xs font-black uppercase tracking-wider text-slate-400">Relevance Sort</label>{{ form.sort }}</div>
+        </form>
+    </div>
+
+    <div class="space-y-3">
+        <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">Scan Pipeline Outputs Payload Matched</h2>
+        
+        {% for article in results %}
+        <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-3xs flex items-center justify-between hover:shadow-2xs group transition-all border-l-2"
+             style="border-l-color: {{ article.category.color_hex }}">
+            <div class="space-y-1 max-w-2xl">
+                <div class="flex items-center space-x-2">
+                    <span class="text-4xs font-extrabold uppercase tracking-widest text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded">{{ article.category.name }}</span>
+                    <span class="text-4xs font-bold px-2 py-0.5 rounded uppercase border tracking-wider {% if article.article_type == 'support' %}bg-amber-50 text-amber-700{% else %}bg-blue-50 text-blue-700{% endif %}">{{ article.get_article_type_display }}</span>
+                </div>
+                <a href="{{ article.get_absolute_url }}" class="block text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors pt-0.5">
+                    {{ article.title }}
+                </a>
+                <p class="text-xs text-slate-400 font-normal leading-relaxed line-clamp-2 max-w-xl">{{ article.summary|default:"No details provided." }}</p>
+            </div>
+            
+            <div class="text-center font-sans text-3xs font-bold text-slate-700 bg-slate-50 border border-slate-100 p-2 rounded-lg shrink-0">
+                <p>{{ article.views_count }}</p><p class="text-4xs text-slate-400 font-normal uppercase tracking-wider mt-0.5">Clicks</p>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-16 border border-dashed border-slate-200 rounded-xl bg-white space-y-2 text-slate-400">
+            <svg class="mx-auto h-8 w-8 text-slate-300 stroke-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <p class="text-sm font-bold text-slate-700">No Target Match Parameters Discovered</p>
+            <p class="text-xs max-w-xs mx-auto">Verify spelling profiles, truncate query terms or broaden taxonomy scopes filter constraints above.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

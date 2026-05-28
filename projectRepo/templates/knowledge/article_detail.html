@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-8" 
+     x-data="{ 
+        helpfulVotes: {{ article.helpful_votes }}, 
+        notHelpfulVotes: {{ article.not_helpful_votes }},
+        submitFeedback(vote) {
+            let formData = new FormData();
+            formData.append('is_helpful', vote);
+            fetch('{% url 'article_feedback' article.slug %}', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    this.helpfulVotes = data.helpful_votes;
+                    this.notHelpfulVotes = data.not_helpful_votes;
+                }
+            });
+        }
+     }">
+    
+    <div class="lg:col-span-3 space-y-6">
+        
+        <div class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs space-y-4">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center space-x-2">
+                    <span class="text-4xs font-extrabold uppercase tracking-widest text-white bg-blue-600 px-2.5 py-1 rounded shadow-3xs" style="background-color: {{ article.category.color_hex }}">{{ article.category.name }}</span>
+                    <span class="text-4xs font-bold px-2.5 py-1 rounded border border-slate-200 uppercase tracking-wider text-slate-600 bg-slate-50">{{ article.get_article_type_display }}</span>
+                    {% if article.severity and article.severity != 'n/a' %}
+                    <span class="text-4xs font-extrabold uppercase tracking-widest px-2.5 py-1 rounded {% if article.severity == 'critical' or article.severity == 'high' %}bg-red-50 text-red-700 border border-red-100{% else %}bg-amber-50 text-amber-700 border border-amber-100{% endif %}">{{ article.get_severity_display }} Priority</span>
+                    {% endif %}
+                </div>
+                
+                <div class="flex items-center space-x-2 text-3xs font-bold text-slate-500">
+                    <span>v{{ article.version }}.0 Log State</span>
+                    {% if can_edit %}
+                    <a href="{% url 'article_edit' article.slug %}" class="text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100 transition-colors">Edit Asset Document</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 leading-tight">{{ article.title }}</h1>
+            <p class="text-xs text-slate-400 font-normal leading-relaxed italic border-l-2 border-slate-200 pl-3 bg-slate-50/50 py-1 rounded-r">{{ article.summary }}</p>
+        </div>
+
+        {% if article.article_type == 'support' %}
+        <div class="bg-amber-50/40 border border-amber-200/60 rounded-xl p-5 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-sans">
+            <div><p class="text-4xs uppercase tracking-wider text-amber-600 font-extrabold">Affected Platform Ecosystem</p><p class="font-bold text-slate-800 mt-0.5">{{ article.affected_systems|default:"N/A" }}</p></div>
+            <div><p class="text-4xs uppercase tracking-wider text-amber-600 font-extrabold">Microsoft Infrastructure Core</p><p class="font-bold text-slate-800 mt-0.5">{{ article.microsoft_products|default:"N/A" }}</p></div>
+            <div><p class="text-4xs uppercase tracking-wider text-amber-600 font-extrabold">Diagnostic Fault Keys</p><p class="font-mono font-bold text-slate-800 mt-0.5">{{ article.error_codes|default:"N/A" }}</p></div>
+            <div><p class="text-4xs uppercase tracking-wider text-amber-600 font-extrabold">Resolution Pipeline Classification</p><p class="font-bold text-slate-800 mt-0.5">{{ article.resolution_type|default:"N/A" }}</p></div>
+        </div>
+        {% endif %}
+
+        {% if article.article_type == 'project' %}
+        <div class="bg-blue-50/40 border border-blue-200/60 rounded-xl p-5 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-sans">
+            <div><p class="text-4xs uppercase tracking-wider text-blue-600 font-extrabold">Project Scope Type</p><p class="font-bold text-slate-800 mt-0.5">{{ article.project_type|default:"N/A" }}</p></div>
+            <div><p class="text-4xs uppercase tracking-wider text-blue-600 font-extrabold">Engineering Stack</p><p class="font-bold text-slate-800 mt-0.5">{{ article.tech_stack|default:"N/A" }}</p></div>
+            <div><p class="text-4xs uppercase tracking-wider text-blue-600 font-extrabold">Complexity Allocation</p><p class="font-bold text-slate-800 mt-0.5 font-sans capitalize">{{ article.difficulty_level|default:"Medium" }}</p></div>
+            <div><p class="text-4xs uppercase tracking-wider text-blue-600 font-extrabold">Estimated Duration Matrix</p><p class="font-bold text-slate-800 mt-0.5">{{ article.estimated_duration|default:"N/A" }}</p></div>
+        </div>
+        {% if article.prerequisites %}
+        <div class="bg-white border border-slate-200 p-5 rounded-xl space-y-2 text-xs">
+            <h3 class="font-black text-slate-800 text-3xs uppercase tracking-widest text-blue-600">Administrative Pre-Requisites Blueprint</h3>
+            <p class="text-slate-600 whitespace-pre-line leading-relaxed">{{ article.prerequisites }}</p>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <div class="bg-white border border-slate-200/60 p-6 md:p-8 rounded-xl shadow-2xs space-y-4">
+            <h3 class="text-3xs uppercase tracking-widest font-extrabold text-slate-400 border-b pb-2">Analysis Narrative Description</h3>
+            <div class="prose prose-sm max-w-none text-slate-700 leading-relaxed font-sans font-normal whitespace-pre-line">
+                {{ article.content|safe }}
+            </div>
+        </div>
+
+        {% if steps %}
+        <div class="space-y-4">
+            <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider">Sequential Engineering Playbook Phases</h2>
+            <div class="space-y-3">
+                {% for step in steps %}
+                <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs space-y-3 relative overflow-hidden">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="h-6 w-6 rounded-md bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center shadow-3xs">{{ step.step_number }}</span>
+                            <h3 class="text-xs font-bold text-slate-800">{{ step.title }}</h3>
+                        </div>
+                        {% if step.is_optional %}<span class="text-4xs font-bold uppercase tracking-widest bg-slate-100 text-slate-400 px-2 py-0.5 rounded">Optional Phase</span>{% endif %}
+                    </div>
+                    <p class="text-xs text-slate-600 font-normal leading-relaxed">{{ step.description }}</p>
+                    {% if step.code_snippet %}
+                    <div class="relative bg-slate-900 text-slate-100 p-4 rounded-lg font-mono text-xs overflow-x-auto shadow-inner group">
+                        <span class="absolute top-2 right-2 text-4xs uppercase tracking-widest text-slate-600 group-hover:text-slate-400 select-none font-sans font-bold">{{ step.code_language }}</span>
+                        <pre><code>{{ step.code_snippet }}</code></pre>
+                    </div>
+                    {% endif %}
+                    {% if step.warning %}
+                    <div class="bg-red-50/50 border border-red-100 text-red-800 rounded-lg p-3 text-3xs font-medium flex items-start space-x-2">
+                        <span class="shrink-0 font-bold">⚠ WARNING:</span><span class="text-red-700">{{ step.warning }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="space-y-0.5">
+                <h4 class="text-xs font-bold text-slate-800">Has this asset log successfully resolved the operational roadblock?</h4>
+                <p class="text-3xs text-slate-400 font-normal">Your interactive audits calibrate engineering relevance sorting values inside the indexing engines.</p>
+            </div>
+            <div class="flex items-center space-x-2 shrink-0">
+                <button @click="submitFeedback('true')" class="px-3 py-1.5 bg-white border border-slate-200 hover:border-emerald-500 rounded-lg text-xs font-bold text-slate-700 flex items-center space-x-1 shadow-3xs active:scale-[0.98] transition-all">
+                    <span>👍 Yes, Validated</span>
+                    <span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded font-black text-3xs" x-text="helpfulVotes"></span>
+                </button>
+                <button @click="submitFeedback('false')" class="px-3 py-1.5 bg-white border border-slate-200 hover:border-red-500 rounded-lg text-xs font-bold text-slate-700 flex items-center space-x-1 shadow-3xs active:scale-[0.98] transition-all">
+                    <span>👎 Inaccurate</span>
+                    <span class="bg-red-50 text-red-700 px-1.5 py-0.2 rounded font-black text-3xs" x-text="notHelpfulVotes"></span>
+                </button>
+            </div>
+        </div>
+
+        <div id="comments" class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs space-y-6">
+            <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider border-b pb-2">Technical Collaborations Feed Matrix</h3>
+            
+            <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                {% for comment in article.comments.all %}
+                <div class="p-4 bg-slate-50/60 border border-slate-200/40 rounded-xl space-y-1.5">
+                    <div class="flex items-center justify-between text-3xs font-bold">
+                        <span class="text-slate-700">{{ comment.author.full_name }} <span class="text-slate-400 font-normal">({{ comment.author.get_role_display }})</span></span>
+                        <span class="text-slate-400 font-normal">{{ comment.created_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                    <p class="text-xs text-slate-600 font-normal whitespace-pre-line leading-relaxed">{{ comment.content|safe }}</p>
+                </div>
+                {% empty %}
+                <p class="text-xs text-slate-400 italic py-4 text-center">No structural diagnostic comments left on this repository asset record line.</p>
+                {% endfor %}
+            </div>
+
+            <form action="{% url 'add_comment' article.slug %}" method="POST" class="space-y-3 pt-4 border-t border-slate-100">
+                {% csrf_token %}
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Append Engineering Correction / Clarification Log</label>
+                    {{ comment_form.content }}
+                </div>
+                <button type="submit" class="px-4 py-2 bg-slate-800 text-white font-bold text-xs rounded-lg hover:bg-slate-900 transition-all shadow-sm">Submit Collaboration Node</button>
+            </form>
+        </div>
+
+    </div>
+
+    <div class="space-y-6">
+        
+        <div class="bg-white border border-slate-200/60 rounded-xl p-5 shadow-2xs space-y-3 text-xs">
+            <h4 class="text-3xs uppercase font-extrabold tracking-widest text-slate-400 border-b pb-1.5">Primary Author Node</h4>
+            <div class="flex items-center space-x-3">
+                <div class="h-10 w-10 rounded-full bg-blue-600 text-white font-black flex items-center justify-center shrink-0 border shadow-sm">{{ article.author.initials }}</div>
+                <div class="overflow-hidden">
+                    <p class="font-bold text-slate-800 truncate">{{ article.author.full_name }}</p>
+                    <p class="text-3xs text-slate-400 font-medium truncate uppercase tracking-wider mt-0.5">{{ article.author.department|default:"Infrastructure Eng" }}</p>
+                </div>
+            </div>
+            <div class="pt-2 border-t border-slate-100 space-y-1 text-3xs text-slate-400 font-medium">
+                <p>Logged Build: {{ article.created_at|date:"M d, Y" }}</p>
+                <p>Latest Revision: {{ article.updated_at|date:"M d, Y" }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200/60 rounded-xl p-5 shadow-2xs space-y-4">
+            <h4 class="text-3xs uppercase font-extrabold tracking-widest text-slate-400 border-b pb-1.5">Digital File Attachments Vault</h4>
+            <div class="space-y-2">
+                {% for att in article.attachments.all %}
+                <a href="{{ att.file.url }}" target="_blank" class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/50 hover:bg-blue-50/50 hover:border-blue-300 transition-all group text-xs font-sans">
+                    <div class="overflow-hidden space-y-0.5 max-w-[150px]">
+                        <p class="font-bold text-slate-700 truncate group-hover:text-blue-600 transition-colors">{{ att.original_name }}</p>
+                        <p class="text-4xs text-slate-400 font-medium truncate">{{ att.description|default:"No description" }}</p>
+                    </div>
+                    <span class="text-4xs font-mono font-bold text-slate-400 px-1.5 py-0.5 bg-white border border-slate-200 rounded">{{ att.file_size_bytes|filesizeformat }}</span>
+                </a>
+                {% empty %}
+                <p class="text-3xs text-slate-400 italic py-2">No binary template scripts or environment architecture topology attachments hosted.</p>
+                {% endfor %}
+            </div>
+            
+            {% if attachment_form %}
+            <form action="{% url 'article_edit' article.slug %}" method="POST" enctype="multipart/form-data" class="pt-3 border-t border-slate-100 space-y-2">
+                {% csrf_token %}
+                <div class="space-y-1 font-sans text-3xs">{{ attachment_form.file }}</div>
+                <div class="space-y-1">{{ attachment_form.description }}</div>
+                <button type="submit" class="w-full py-1.5 bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors font-bold text-3xs rounded-md">Upload Payload Link</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="bg-white border border-slate-200/60 rounded-xl p-5 shadow-2xs space-y-3">
+            <h4 class="text-3xs uppercase font-extrabold tracking-widest text-slate-400 border-b pb-1.5">Symmetrical Cross-References</h4>
+            <div class="space-y-2.5">
+                {% for rel in related_articles %}
+                <a href="{{ rel.get_absolute_url }}" class="block group space-y-0.5">
+                    <span class="text-4xs font-bold text-blue-600 uppercase tracking-widest">{{ rel.category.name }}</span>
+                    <h5 class="text-xs font-bold text-slate-700 group-hover:text-blue-600 transition-colors truncate">{{ rel.title }}</h5>
+                </a>
+                {% empty %}
+                <p class="text-3xs text-slate-400 italic py-1">No cross-referenced architecture mapping associations linked.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
