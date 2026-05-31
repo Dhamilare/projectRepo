@@ -260,13 +260,12 @@ class CommentForm(TailwindFormMixin, forms.ModelForm):
 class AttachmentForm(TailwindFormMixin, forms.ModelForm):
     class Meta:
         model = Attachment
-        fields = ["file", "description"]
+        fields = ["file"]
         widgets = {
             "file": forms.FileInput(attrs={
                 "accept": "*/*",
                 "class": "block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer file:transition-all"
             }),
-            "description": forms.TextInput(attrs={"placeholder": "e.g. Mailbox migration CSV template, environment topology diagram..."}),
         }
 
     def __init__(self, *args, **kwargs):

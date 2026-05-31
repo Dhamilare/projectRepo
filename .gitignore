@@ -6,6 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
+# ─── DJANGO MEDIA STORAGE ───
+# Excludes all uploaded engineering attachments and binary files
+media/
+uploads/
+
 # Distribution / packaging
 .Python
 build/

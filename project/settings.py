@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # CORE
 # ─────────────────────────────────────────────────────────────────────────────
 SECRET_KEY = config("SECRET_KEY")
-DEBUG = config("DEBUG", default=True, cast=bool)
+DEBUG = config("DEBUG")
 ALLOWED_HOSTS = ['*']
 
 DJANGO_APPS = [
@@ -66,20 +66,29 @@ WSGI_APPLICATION = "project.wsgi.application"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DATABASE  (PostgreSQL)
+# DATABASE 
 # ─────────────────────────────────────────────────────────────────────────────
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="project_db"),
-        "USER": config("DB_USER", default="postgres"),
-        "PASSWORD": config("DB_PASSWORD", default="Klassnics@1759"),
-        "HOST": config("DB_HOST", default="localhost"),
-        "PORT": config("DB_PORT", default="5432"),
-        "CONN_MAX_AGE": 60,
-        "OPTIONS": {"connect_timeout": 10},
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": config("DB_NAME", default="project_db"),
+#         "USER": config("DB_USER", default="postgres"),
+#         "PASSWORD": config("DB_PASSWORD", default="Klassnics@1759"),
+#         "HOST": config("DB_HOST", default="localhost"),
+#         "PORT": config("DB_PORT", default="5432"),
+#         "CONN_MAX_AGE": 60,
+#         "OPTIONS": {"connect_timeout": 10},
+#     }
+# }
 
 
 # ─────────────────────────────────────────────────────────────────────────────

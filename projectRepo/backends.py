@@ -58,9 +58,13 @@ class MicrosoftEntraBackend(BaseBackend):
 
     def _get_graph_profile(self, access_token: str) -> dict | None:
         headers = {"Authorization": f"Bearer {access_token}"}
+        
+        select_fields = "id,mail,userPrincipalName,givenName,surname,jobTitle,department,businessPhones,mobilePhone"
+        endpoint = f"{_MS['GRAPH_ENDPOINT']}/me?$select={select_fields}"
+        
         try:
             resp = requests.get(
-                f"{_MS['GRAPH_ENDPOINT']}/me",
+                endpoint,
                 headers=headers,
                 timeout=10,
             )
@@ -90,20 +94,22 @@ class MicrosoftEntraBackend(BaseBackend):
             user = User(email=email)
 
         user.azure_object_id = azure_oid
-        user.first_name = profile.get("givenName", user.first_name or "")
-        user.last_name = profile.get("surname", user.last_name or "")
-        user.job_title = profile.get("jobTitle", user.job_title or "")
-        user.department = profile.get("department", user.department or "")
+        user.first_name = profile.get("givenName") or user.first_name or ""
+        user.last_name = profile.get("surname") or user.last_name or ""
+        user.job_title = profile.get("jobTitle") or user.job_title or ""
+        
+        user.department = profile.get("department") or "IT"
         
         business_phones = profile.get("businessPhones", [])
         user.phone = profile.get("mobilePhone") or (business_phones[0] if business_phones else "")
         
         user.username = email
         user.is_active = True
-        user.is_staff = True
+        
+        user.is_staff = (user.role == "admin" or user.is_superuser)
 
         user.save()
-        logger.info("Entra login successful for: %s (oid=%s)", email, azure_oid)
+        logger.info("Entra login successful for: %s (oid=%s, department=%s)", email, azure_oid, user.department)
         return user
 
 

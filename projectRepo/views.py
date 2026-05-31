@@ -15,7 +15,7 @@ from .backends import build_auth_url
 from .forms import ArticleForm, ProjectStepFormSet, CommentForm, AttachmentForm, SearchForm
 from .models import (
     User, Article, Category, Tag, Comment,
-    ArticleFeedback, Notification, SearchLog,
+    ArticleFeedback, Notification, SearchLog, Attachment
 )
 
 logger = logging.getLogger("projectRepo")
@@ -68,18 +68,20 @@ def _article_type_icon(article_type: str) -> str:
 
 
 def _handle_attachment_upload(request, article):
-    """Process any file upload submitted alongside an article form."""
-    if "attachment_file" not in request.FILES:
+    if "attachments" not in request.FILES:
         return
-    form = AttachmentForm(request.POST, request.FILES)
-    if form.is_valid():
-        att = form.save(commit=False)
-        att.article = article
-        att.uploaded_by = request.user
-        att.original_name = request.FILES["attachment_file"].name
-        att.file_type = request.FILES["attachment_file"].content_type or ""
-        att.file_size_bytes = request.FILES["attachment_file"].size
-        att.save()
+        
+    uploaded_files = request.FILES.getlist("attachments")
+    
+    for file_obj in uploaded_files:
+        Attachment.objects.create(
+            article=article,
+            file=file_obj,
+            uploaded_by=request.user,
+            file_name=file_obj.name,  
+            file_size=file_obj.size, 
+            file_type=file_obj.content_type or ""
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -191,28 +193,39 @@ def profile_view(request):
 
 @login_required
 def dashboard(request):
-    """Aggregates and metrics counters across support and project environments."""
+    """Aggregates metrics counters and feeds isolated strictly by the engineer's Azure department."""
     user = request.user
-    published_qs = Article.objects.filter(status=Article.Status.PUBLISHED)
+    
+    # DEPARTMENT ISOLATION: Superusers see everything; otherwise filter content to match user's technical domain
+    if user.is_superuser or user.role == "admin":
+        base_published_qs = Article.objects.filter(status=Article.Status.PUBLISHED)
+        base_all_qs = Article.objects.all()
+    else:
+        # Matches user's exact department string (case-insensitive) or pulls general institutional posts
+        base_published_qs = Article.objects.filter(
+            status=Article.Status.PUBLISHED
+        ).filter(Q(author__department__iexact=user.department) | Q(visibility=Article.Visibility.PUBLIC))
+        
+        base_all_qs = Article.objects.filter(Q(author__department__iexact=user.department) | Q(author=user))
 
     stats = {
-        "total_support": published_qs.filter(article_type=Article.ArticleType.SUPPORT).count(),
-        "total_project": published_qs.filter(article_type=Article.ArticleType.PROJECT).count(),
-        "total_software": published_qs.filter(article_type=Article.ArticleType.SOFTWARE).count(),
-        "total_general": published_qs.filter(article_type=Article.ArticleType.GENERAL).count(),
-        "my_drafts": Article.objects.filter(author=user, status=Article.Status.DRAFT).count(),
-        "needs_review": Article.objects.filter(needs_review=True, status=Article.Status.IN_REVIEW).count(),
+        "total_support": base_published_qs.filter(article_type=Article.ArticleType.SUPPORT).count(),
+        "total_project": base_published_qs.filter(article_type=Article.ArticleType.PROJECT).count(),
+        "total_software": base_published_qs.filter(article_type=Article.ArticleType.SOFTWARE).count(),
+        "total_general": base_published_qs.filter(article_type=Article.ArticleType.GENERAL).count(),
+        "my_drafts": base_all_qs.filter(author=user, status=Article.Status.DRAFT).count(),
+        "needs_review": base_all_qs.filter(needs_review=True, status=Article.Status.IN_REVIEW).count(),
     }
 
     recent_articles = (
-        published_qs
+        base_published_qs
         .select_related("author", "category")
         .prefetch_related("tags")
         .order_by("-published_at")[:settings.RECENT_ARTICLES_COUNT]
     )
 
     featured_articles = (
-        published_qs
+        base_published_qs
         .filter(is_featured=True)
         .select_related("author", "category")
         .order_by("-updated_at")[:4]
@@ -227,7 +240,7 @@ def dashboard(request):
     )
 
     popular_articles = (
-        published_qs
+        base_published_qs
         .order_by("-views_count")
         .select_related("category")[:5]
     )
@@ -237,7 +250,7 @@ def dashboard(request):
         .filter(is_active=True, parent=None)
         .annotate(pub_count=Count(
             "articles",
-            filter=Q(articles__status=Article.Status.PUBLISHED)
+            filter=Q(articles__status=Article.Status.PUBLISHED, articles__author__department__iexact=user.department) if not (user.is_superuser or user.role == "admin") else Q(articles__status=Article.Status.PUBLISHED)
         ))
         .order_by("sort_order")
     )
@@ -268,14 +281,19 @@ def dashboard(request):
 
 @login_required
 def article_list(request):
-    """Displays knowledge articles with filtering capabilities."""
+    """Displays knowledge articles matching filters, bounded by departmental permissions."""
     form = SearchForm(request.GET or None)
-    qs = (
-        Article.objects
-        .filter(status=Article.Status.PUBLISHED)
-        .select_related("author", "category")
-        .prefetch_related("tags")
-    )
+    user = request.user
+    
+    # DEPARTMENT ISOLATION BOUNDARY ENFORCEMENT
+    if user.is_superuser or user.role == "admin":
+        qs = Article.objects.filter(status=Article.Status.PUBLISHED).select_related("author", "category").prefetch_related("tags")
+    else:
+        qs = Article.objects.filter(
+            status=Article.Status.PUBLISHED
+        ).filter(
+            Q(author__department__iexact=user.department) | Q(visibility=Article.Visibility.PUBLIC)
+        ).select_related("author", "category").prefetch_related("tags")
 
     if not request.user.can_publish():
         qs = qs.exclude(visibility=Article.Visibility.RESTRICTED)
@@ -351,7 +369,6 @@ def article_detail(request, slug: str):
         ).first()
 
     comment_form = CommentForm()
-    attachment_form = AttachmentForm() if request.user.can_edit_content() else None
 
     related_articles = (
         article.related_articles
@@ -363,7 +380,6 @@ def article_detail(request, slug: str):
         "page_title": article.title,
         "article": article,
         "comment_form": comment_form,
-        "attachment_form": attachment_form,
         "user_feedback": user_feedback,
         "related_articles": related_articles,
         "can_edit": (request.user == article.author or request.user.can_edit_content()),
@@ -373,6 +389,11 @@ def article_detail(request, slug: str):
 
 @login_required
 def article_create(request):
+    # CONSTRAINT: Only Administrators and Engineers are allowed to build documents
+    if request.user.role == "technician" or not request.user.can_edit_content():
+        messages.error(request, "Access Denied: Your technical profile classification does not grant item authoring privileges.")
+        return redirect("dashboard")
+    
     """Builds structural asset profiles mapping input steps cleanly onto database models."""
     if not request.user.can_edit_content():
         messages.error(request, "You don't have permission to create articles.")
@@ -406,13 +427,14 @@ def article_create(request):
         form = ArticleForm(user=request.user, initial={"article_type": initial_type})
         step_formset = ProjectStepFormSet()
 
-    categories = Category.objects.filter(is_active=True).select_related("parent").order_by("name")
+    categories_queryset = Category.objects.filter(is_active=True).order_by("name")
+    categories_list = list(categories_queryset.values("id", "name", "category_type"))
 
     return render(request, "knowledge/article_form.html", {
         "page_title": "Create New Article",
         "form": form,
         "step_formset": step_formset,
-        "categories_json": json.dumps(list(categories.values("id", "name", "category_type"))),
+        "categories_json": categories_list,
         "is_create": True,
     })
 
@@ -447,14 +469,15 @@ def article_edit(request, slug: str):
         form = ArticleForm(instance=article, user=request.user)
         step_formset = ProjectStepFormSet(instance=article)
 
-    categories = Category.objects.filter(is_active=True).select_related("parent").order_by("name")
+    categories_queryset = Category.objects.filter(is_active=True).order_by("name")
+    categories_list = list(categories_queryset.values("id", "name", "category_type"))
 
     return render(request, "knowledge/article_form.html", {
         "page_title": f"Edit — {article.title}",
         "form": form,
         "step_formset": step_formset,
         "article": article,
-        "categories_json": json.dumps(list(categories.values("id", "name", "category_type"))),
+        "categories_json": categories_list,
         "is_create": False,
     })
 
@@ -490,13 +513,15 @@ def add_comment(request, slug: str):
         comment = form.save(commit=False)
         comment.article = article
         comment.author = request.user
+        comment.is_approved = True 
+        
         parent_id = request.POST.get("parent_id")
         if parent_id:
             comment.parent = Comment.objects.filter(pk=parent_id, article=article).first()
         comment.save()
-        messages.success(request, "Comment added.")
+        messages.success(request, "Engineering collaboration node added to matrix feed.")
     else:
-        messages.error(request, "Your comment could not be saved.")
+        messages.error(request, "Your comment could not be saved due to validation constraints.")
 
     return redirect(f"{article.get_absolute_url()}#comments")
 
@@ -541,21 +566,28 @@ def search_view(request):
     results = []
 
     if q and len(q) >= 2:
-        qs = Article.objects.filter(
-            status=Article.Status.PUBLISHED
-        ).select_related("author", "category").prefetch_related("tags")
+        qs = Article.objects.filter(status=Article.Status.PUBLISHED).select_related("author", "category").prefetch_related("tags")
+
+        # ── DEPARTMENT ACCESS CONTROL BOUNDARY ENFORCEMENT ──
+        # Superusers and Admins search everything; regular Engineers are isolated to their own domain or public entries
+        if not (request.user.is_superuser or request.user.role == "admin"):
+            qs = qs.filter(
+                Q(author__department__iexact=request.user.department) | 
+                Q(visibility=Article.Visibility.PUBLIC)
+            )
 
         if not request.user.can_publish():
             qs = qs.exclude(visibility=Article.Visibility.RESTRICTED)
 
+        # Core text-index lookup matrix
         qs = qs.filter(
             Q(title__icontains=q)
             | Q(summary__icontains=q)
             | Q(content__icontains=q)
             | Q(search_keywords__icontains=q)
             | Q(error_codes__icontains=q)
-            | Q(microsoft_products__icontains=q)
             | Q(tags__name__icontains=q)
+            | Q(microsoft_product__icontains=q) 
         ).distinct()
 
         if form.is_valid():
@@ -565,6 +597,7 @@ def search_view(request):
                 qs = qs.filter(category=form.cleaned_data["category"])
             if form.cleaned_data.get("severity"):
                 qs = qs.filter(severity=form.cleaned_data["severity"])
+            
             sort = form.cleaned_data.get("sort", "-updated_at")
             qs = qs.order_by(sort)
 
@@ -572,13 +605,13 @@ def search_view(request):
             query=q,
             user=request.user,
             results_count=qs.count(),
-            ip_address=_get_client_ip(request),
+            ip_address=_get_client_ip(request) if globals().get('_get_client_ip') else "127.0.0.1",
         )
 
         results = _paginate(request, qs)
 
     return render(request, "knowledge/search_results.html", {
-        "page_title": f'Search: "{q}"' if q else "Search",
+        "page_title": f'Search: "{q}"' if q else "Search System Vault",
         "form": form,
         "query": q,
         "results": results,
@@ -658,6 +691,51 @@ def search_suggestions(request):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+def manage_categories(request):
+    if request.user.role != "admin" and not request.user.is_superuser:
+        return render(request, "403.html", status=403)
+        
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        category_type = request.POST.get("category_type", "general")
+        color_hex = request.POST.get("color_hex", "#2563EB").strip()
+        description = request.POST.get("description", "").strip()
+        
+        if not name:
+            messages.error(request, "Validation Error: Category name identifier cannot be blank.")
+        else:
+            from django.utils.text import slugify
+            slug = slugify(name)
+            
+            # Check for duplicate slugs to prevent URL routing collisions
+            if Category.objects.filter(slug=slug).exists():
+                messages.error(request, f"Conflict: A taxonomy node matching the identifier '{name}' already exists.")
+            else:
+                Category.objects.create(
+                    name=name,
+                    slug=slug,
+                    category_type=category_type,
+                    color_hex=color_hex,
+                    description=description,
+                    created_by=request.user,
+                    is_active=True
+                )
+                messages.success(request, f"Successfully committed taxonomy branch node '{name}' to the central vault.")
+                logger.info("Taxonomy Configuration Altered: %s created category %s", request.user.email, name)
+                return redirect("manage_categories")
+
+    categories = Category.objects.all().annotate(
+        total_articles=Count("articles")
+    ).order_by("-is_active", "sort_order", "name")
+    
+    return render(request, "knowledge/manage_categories.html", {
+        "page_title": "Taxonomy Management Console",
+        "categories": categories,
+        "type_choices": [('support', 'Support Fixes focus'), ('project', 'Project Playbooks focus'), ('general', 'General Infrastructure Scope')]
+    })
+
+
+@login_required
 def category_detail(request, slug: str):
     """Displays category components alongside child pathways."""
     category = get_object_or_404(Category, slug=slug, is_active=True)
@@ -715,6 +793,36 @@ def notifications_view(request):
     return render(request, "knowledge/notifications.html", {
         "page_title": "Notifications",
         "notifications": _paginate(request, notifs, per_page=30),
+    })
+
+
+@login_required
+def access_control_matrix(request):
+    if request.user.role != "admin" and not request.user.is_superuser:
+        return render(request, "403.html", status=403)
+        
+    if request.method == "POST":
+        target_user_id = request.POST.get("user_id")
+        new_role = request.POST.get("role")
+        
+        target_user = get_object_or_404(User, id=target_user_id)
+        
+        if target_user == request.user and new_role != "admin":
+            messages.error(request, "Security protection: You cannot remove your own administrative designation.")
+        else:
+            target_user.role = new_role
+            target_user.is_staff = (new_role == "admin")
+            target_user.save()
+            messages.success(request, f"Updated clearances for {target_user.full_name}.")
+            
+        return redirect("access_control_matrix")
+
+    engineers = User.objects.all().order_by("first_name", "last_name")
+    
+    return render(request, "accounts/access_control.html", {
+        "page_title": "Access Control Matrix Hub",
+        "engineers": engineers,
+        "role_choices": User.Role.choices, 
     })
 
 

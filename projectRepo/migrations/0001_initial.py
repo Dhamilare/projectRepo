@@ -128,7 +128,7 @@ class Migration(migrations.Migration):
             name='Attachment',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('file', models.FileField(upload_to=projectRepo.models.attachment_upload_path)),
+                ('file', models.FileField(upload_to=projectRepo.models.article_attachment_path)),
                 ('original_name', models.CharField(max_length=255)),
                 ('file_type', models.CharField(blank=True, max_length=100)),
                 ('file_size_bytes', models.PositiveIntegerField(default=0)),

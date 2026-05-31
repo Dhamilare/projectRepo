@@ -4,6 +4,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 from django.urls import reverse
+from django.conf import settings
 from django.core.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -33,10 +34,7 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     class Role(models.TextChoices):
         ADMIN = "admin", "Administrator"
-        TEAM_LEAD = "team_lead", "Team Lead"
-        SENIOR_TECH = "senior_tech", "Senior Technician"
-        TECHNICIAN = "technician", "Technician"
-        DEVELOPER = "developer", "Developer"
+        ENGINEER = "engineer", "Engineer"
         VIEWER = "viewer", "Viewer (Read Only)"
 
     email = models.EmailField(unique=True, db_index=True)
@@ -88,16 +86,20 @@ class User(AbstractUser):
         return (timezone.now() - self.last_seen).total_seconds() < 300
 
     def can_edit_content(self) -> bool:
-        return self.role in [self.Role.ADMIN, self.Role.TEAM_LEAD, self.Role.SENIOR_TECH, self.Role.DEVELOPER]
+        """Determines if the user has authoring/modification rights (Admin or Engineer)."""
+        return self.role in [self.Role.ADMIN, self.Role.ENGINEER] or self.is_superuser
 
     def can_publish(self) -> bool:
-        return self.role in [self.Role.ADMIN, self.Role.TEAM_LEAD, self.Role.SENIOR_TECH]
+        """Determines if the user can set articles to a live PUBLISHED status."""
+        return self.role in [self.Role.ADMIN, self.Role.ENGINEER] or self.is_superuser
 
     def can_manage_users(self) -> bool:
-        return self.role in [self.Role.ADMIN, self.Role.TEAM_LEAD] or self.is_staff
+        """Restricts Access Control Matrix modifications purely to top-tier Administrators."""
+        return self.role == self.Role.ADMIN or self.is_superuser
 
     def can_delete_content(self) -> bool:
-        return self.role in [self.Role.ADMIN, self.Role.TEAM_LEAD] or self.is_staff
+        """Restricts complete documentation deletion privileges to Administrators."""
+        return self.role == self.Role.ADMIN or self.is_superuser
 
     def record_login(self, ip_address: str = None):
         self.login_count += 1
@@ -321,24 +323,32 @@ class ProjectStep(models.Model):
         return f"Step {self.step_number}: {self.title}"
 
 
-def attachment_upload_path(instance, filename):
-    return f"attachments/{instance.article.pk}/{filename}"
+def article_attachment_path(instance, filename):
+    """Generates a clean file path dynamically: uploads/articles/slug/filename"""
+    return f"uploads/articles/{instance.article.slug}/{filename}"
 
 class Attachment(models.Model):
-    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="attachments")
-    file = models.FileField(upload_to=attachment_upload_path)
-    original_name = models.CharField(max_length=255)
+    article = models.ForeignKey(
+        Article, 
+        on_delete=models.CASCADE, 
+        related_name="attachments" 
+    )
+    file = models.FileField(upload_to=article_attachment_path, max_length=500)
+    file_name = models.CharField(max_length=255)
+    file_size = models.BigIntegerField(help_text="File size stored explicitly in bytes")
     file_type = models.CharField(max_length=100, blank=True)
-    file_size_bytes = models.PositiveIntegerField(default=0)
-    description = models.CharField(max_length=300, blank=True)
-    uploaded_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["uploaded_at"]
+        ordering = ["-created_at"]
 
     def __str__(self):
-        return self.original_name
+        return f"{self.file_name} -> {self.article.title}"
 
     @property
     def file_size_human(self) -> str:

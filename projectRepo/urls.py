@@ -29,7 +29,10 @@ urlpatterns = [
     path("api/search-suggestions/", views.search_suggestions, name="search_suggestions"),
 
     # ====================== TAXONOMIES & NOTIFICATIONS ======================
+    path("categories/", views.manage_categories, name="manage_categories"),
     path("categories/<slug:slug>/", views.category_detail, name="category_detail"),
     path("tags/<slug:slug>/", views.tag_articles, name="tag_articles"),
     path("notifications/", views.notifications_view, name="notifications"),
+
+    path("management/access-control/", views.access_control_matrix, name="access_control_matrix"),
 ]

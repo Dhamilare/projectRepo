@@ -19,14 +19,14 @@
         }
     </style>
 </head>
-<body class="h-full m-0 p-0 overflow-hidden bg-slate-50 text-slate-900 selection:bg-blue-100 selection:text-blue-800">
+<body class="h-full bg-slate-50 text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-800">
 
-    <div class="flex min-h-full" x-data="{ animateForm: false }" x-init="setTimeout(() => animateForm = true, 100)">
+    <div class="flex min-h-screen lg:h-screen overflow-y-auto lg:overflow-hidden" x-data="{ animateForm: false }" x-init="setTimeout(() => animateForm = true, 100)">
         
-        <div class="relative hidden w-0 flex-1 lg:block bg-white border-r border-slate-100">
+        <div class="relative hidden lg:flex lg:flex-1 bg-white border-r border-slate-100">
             <div class="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px] opacity-70"></div>
             
-            <div class="relative flex h-full flex-col justify-between p-16 z-10">
+            <div class="relative flex h-full w-full flex-col justify-between p-12 xl:p-16 z-10">
                 <div class="flex items-center space-x-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-200">
                         <svg class="h-5 w-5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -36,13 +36,13 @@
                     <span class="text-xs font-bold tracking-widest text-slate-400 uppercase">MSP Knowledge Ecosystem</span>
                 </div>
 
-                <div class="max-w-xl space-y-10">
+                <div class="max-w-xl space-y-8 xl:space-y-10 my-auto">
                     <div class="space-y-4">
-                        <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                        <h1 class="text-3xl xl:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">
                             The Central Brain For <br>
                             <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Engineering Execution.</span>
                         </h1>
-                        <p class="text-base text-slate-500 leading-relaxed font-normal">
+                        <p class="text-sm xl:text-base text-slate-500 leading-relaxed font-normal">
                             Stop solving the same ticket twice. Access real-time support resolutions, verify deployment playbooks, and accelerate support onboarding from one centralized repository.
                         </p>
                     </div>
@@ -99,16 +99,16 @@
 
                 <div class="flex items-center space-x-6 text-xs text-slate-400 font-normal">
                     <span>v2.4 Production Engine</span>
-                    <span>&copy; 2026 MSP Repository Workspace</span>
+                    <span>&copy; 2026 mspkb Repository</span>
                 </div>
             </div>
         </div>
 
         
-        <div class="flex flex-1 flex-col justify-center px-6 py-12 sm:px-14 lg:flex-none lg:px-24 xl:px-32 bg-slate-50 relative">
+        <div class="flex flex-1 flex-col justify-center min-h-screen lg:min-h-0 px-4 py-12 sm:px-12 md:px-16 lg:flex-none lg:w-[480px] xl:w-[540px] bg-slate-50 relative">
             
             {% if messages %}
-            <div class="absolute top-6 left-6 right-6 space-y-2 z-50">
+            <div class="absolute top-6 left-4 right-4 space-y-2 z-50">
                 {% for message in messages %}
                 <div x-data="{ show: true }" x-show="show" x-transition.duration.300ms
                      class="flex items-center justify-between p-4 rounded-xl text-sm border {% if message.tags == 'error' %}bg-red-50 border-red-100 text-red-800{% else %}bg-emerald-50 border-emerald-100 text-emerald-800{% endif %} shadow-sm">
@@ -126,19 +126,19 @@
             </div>
             {% endif %}
 
-            <div class="mx-auto w-full max-w-sm lg:w-96 transition-all duration-700 transform"
+            <div class="mx-auto w-full max-w-sm transition-all duration-700 transform"
                  :class="animateForm ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'">
                 
-                <div class="space-y-8">
-                    <div class="flex items-center space-x-3 lg:hidden">
+                <div class="space-y-6">
+                    <div class="flex items-center space-x-3 lg:hidden mb-4">
                         <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75" /></svg>
                         </div>
-                        <span class="text-sm font-bold text-slate-800 tracking-tight">MSP Repository Vault</span>
+                        <span class="text-sm font-bold text-slate-800 tracking-tight">Project<span class="text-blue-600">Repo</span> Vault</span>
                     </div>
 
                     <div class="space-y-2">
-                        <h2 class="text-2xl font-extrabold tracking-tight text-slate-900">Access Identity Vault</h2>
+                        <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Access Identity Vault</h2>
                         <p class="text-xs text-slate-500 font-normal">Sign in using your corporate Microsoft 365 engineer credentials.</p>
                     </div>
                 </div>

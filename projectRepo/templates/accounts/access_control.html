@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Access Control Matrix{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+    <div class="border-b border-slate-200 pb-4">
+        <h1 class="text-xl font-black text-slate-900 uppercase tracking-tight">Access Control Matrix Hub</h1>
+        <p class="text-xs text-slate-400">Manage internal operational engineering roles and elevate security access boundaries.</p>
+    </div>
+
+    <!-- Engineers Authorization Table Matrix -->
+    <div class="bg-white border border-slate-200/60 rounded-xl shadow-2xs overflow-hidden">
+        <table class="min-w-full divide-y divide-slate-100 text-left text-xs font-sans">
+            <thead class="bg-slate-50 text-3xs uppercase tracking-widest font-extrabold text-slate-400">
+                <tr>
+                    <th class="px-6 py-3.5">Engineer / Identity</th>
+                    <th class="px-6 py-3.5">Department</th>
+                    <th class="px-6 py-3.5">Active Level Assignment</th>
+                    <th class="px-6 py-3.5 text-right">Modify Clearances</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-slate-700">
+                {% for eng in engineers %}
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="px-6 py-4 flex items-center space-x-3">
+                        <div class="h-8 w-8 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-2xs select-none border shadow-3xs">{{ eng.initials }}</div>
+                        <div>
+                            <p class="font-bold text-slate-800">{{ eng.full_name }}</p>
+                            <p class="text-3xs font-mono text-slate-400 mt-0.5">{{ eng.email }}</p>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 font-medium text-slate-500">{{ eng.department|default:"Operations" }}</td>
+                    <td class="px-6 py-4">
+                        <span class="text-4xs font-black uppercase tracking-wider px-2 py-0.5 rounded {% if eng.role == 'admin' %}bg-blue-50 text-blue-700 border border-blue-100{% elif eng.role == 'engineer' %}bg-purple-50 text-purple-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+                            {{ eng.get_role_display|default:eng.role }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <form method="POST" action="{% url 'access_control_matrix' %}" class="inline-flex items-center space-x-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="user_id" value="{{ eng.id }}">
+                            <select name="role" class="px-2 py-1 bg-white border border-slate-200 rounded-md text-3xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-transparent">
+                                {% for val, label in role_choices %}
+                                <option value="{{ val }}" {% if eng.role == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="px-2.5 py-1 bg-slate-800 text-white font-bold text-3xs rounded-md hover:bg-slate-900 transition-all active:scale-[0.98]">
+                                Update
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
