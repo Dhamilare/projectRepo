@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}403 Access Denied | Knowledge Base{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-6 text-center">
+        
+        <!-- Status Icon Container -->
+        <div class="mx-auto h-20 w-20 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shadow-sm">
+            <svg class="h-10 w-10 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+        </div>
+
+        <!-- Headline & Description -->
+        <div class="space-y-2">
+            <span class="text-4xs font-black uppercase tracking-widest px-2.5 py-1 rounded bg-red-100 text-red-800 border border-red-200">
+                Security Boundary Error 403
+            </span>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight pt-2">Access Privilege Restricted</h1>
+            <p class="text-xs text-slate-500 font-sans leading-relaxed max-w-sm mx-auto">
+                Your authenticated account lacks sufficient role entitlements to access this operational playbook or execute this system action.
+            </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a href="{% url 'article_list' %}" class="w-full sm:w-auto px-5 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-900 transition-all shadow-sm">
+                Return to Knowledge Base
+            </a>
+            <a href="{% url 'dashboard' %}" class="w-full sm:w-auto px-5 py-2.5 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors">
+                Workspace Dashboard
+            </a>
+        </div>
+
+        <!-- Help Notice Footer -->
+        <p class="text-4xs text-slate-400 pt-6 border-t border-slate-100 font-mono">
+            If you require elevated permissions, contact your Systems Administrator or Infrastructure Lead.
+        </p>
+
+    </div>
+</div>
+{% endblock %}

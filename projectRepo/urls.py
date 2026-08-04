@@ -11,7 +11,7 @@ urlpatterns = [
 
     # ====================== CORE OPERATIONS WORKSPACE ======================
     path("", views.dashboard, name="dashboard"),
-    path("dashboard/", views.dashboard, name="dashboard"),  # Kept as alias for legacy templates
+    path("dashboard/", views.dashboard, name="dashboard"), 
 
     # ====================== ARTICLES (SUPPORT & PROJECTS) ======================
     path("articles/", views.article_list, name="article_list"),
@@ -19,6 +19,7 @@ urlpatterns = [
     path("articles/<slug:slug>/", views.article_detail, name="article_detail"),
     path("articles/<slug:slug>/edit/", views.article_edit, name="article_edit"),
     path("articles/<slug:slug>/delete/", views.article_delete, name="article_delete"),
+    path("attachments/<int:pk>/delete/", views.delete_attachment, name="delete_attachment"),
 
     # ====================== ENGAGEMENT, TELEMETRY & FEEDBACK ======================
     path("articles/<slug:slug>/comment/", views.add_comment, name="add_comment"),

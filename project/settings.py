@@ -148,11 +148,11 @@ CACHES = {
 # ─────────────────────────────────────────────────────────────────────────────
 # MICROSOFT ENTRA ID  (Azure AD)
 # ─────────────────────────────────────────────────────────────────────────────
-_TENANT = config("AZURE_TENANT_ID", default="common")
+_TENANT = config("AZURE_TENANT_ID")
 
 MICROSOFT_AUTH = {
-    "CLIENT_ID": config("AZURE_CLIENT_ID", default=""),
-    "CLIENT_SECRET": config("AZURE_CLIENT_SECRET", default=""),
+    "CLIENT_ID": config("AZURE_CLIENT_ID"),
+    "CLIENT_SECRET": config("AZURE_CLIENT_SECRET"),
     "TENANT_ID": _TENANT,
     "REDIRECT_URI": config(
         "AZURE_REDIRECT_URI", default="http://localhost:8000/auth/callback/"
@@ -190,6 +190,7 @@ SEARCH_SUGGESTIONS_LIMIT = 8
 SEARCH_SUGGESTIONS_CACHE_TTL = 120   # seconds
 RECENT_ARTICLES_COUNT = 10
 MAX_ATTACHMENT_SIZE_MB = 20
+
 ALLOWED_ATTACHMENT_TYPES = [
     "application/pdf",
     "image/jpeg",

@@ -83,6 +83,18 @@ def _handle_attachment_upload(request, article):
             file_type=file_obj.content_type or ""
         )
 
+@login_required
+@require_POST
+def delete_attachment(request, pk: int):
+    """Deletes an uploaded attachment node via an asynchronous request."""
+    attachment = get_object_or_404(Attachment, pk=pk)
+    
+    if request.user == attachment.article.author or request.user.can_edit_content():
+        attachment.file.delete(save=False) 
+        attachment.delete()                
+        return JsonResponse({"success": True})
+    
+    return JsonResponse({"success": False, "error": "Permission denied."}, status=403)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # IDENTITY MANAGEMENT & MICROSOFT ENTRA OAUTH FLOWS
@@ -285,7 +297,6 @@ def article_list(request):
     form = SearchForm(request.GET or None)
     user = request.user
     
-    # DEPARTMENT ISOLATION BOUNDARY ENFORCEMENT
     if user.is_superuser or user.role == "admin":
         qs = Article.objects.filter(status=Article.Status.PUBLISHED).select_related("author", "category").prefetch_related("tags")
     else:
@@ -299,16 +310,26 @@ def article_list(request):
         qs = qs.exclude(visibility=Article.Visibility.RESTRICTED)
 
     article_type = request.GET.get("type")
-    category_slug = request.GET.get("category")
+    category_param = request.GET.get("category")
+    severity = request.GET.get("severity")
     tag_slug = request.GET.get("tag")
     sort = request.GET.get("sort", "-updated_at")
 
     if article_type:
         qs = qs.filter(article_type=article_type)
-    if category_slug:
-        cat = Category.objects.filter(slug=category_slug).first()
+
+    if category_param:
+        if category_param.isdigit():
+            cat = Category.objects.filter(pk=int(category_param)).first()
+        else:
+            cat = Category.objects.filter(slug=category_param).first()
+            
         if cat:
             qs = qs.filter(Q(category=cat) | Q(category__parent=cat))
+
+    if severity and severity != "all":
+        qs = qs.filter(severity=severity)
+
     if tag_slug:
         qs = qs.filter(tags__slug=tag_slug)
 
@@ -316,19 +337,26 @@ def article_list(request):
     if sort in valid_sort:
         qs = qs.order_by(sort)
 
+    total_results = qs.count()
     page_obj = _paginate(request, qs)
+
+    query_params = request.GET.copy()
+    if "page" in query_params:
+        del query_params["page"]
 
     return render(request, "knowledge/article_list.html", {
         "page_title": "Knowledge Base",
         "page_obj": page_obj,
         "form": form,
         "article_type": article_type,
-        "category_slug": category_slug,
+        "category_param": category_param,
+        "severity": severity,
         "tag_slug": tag_slug,
         "sort": sort,
+        "query_string": query_params.urlencode(),  
         "categories": Category.objects.filter(is_active=True, parent=None).order_by("sort_order"),
         "popular_tags": Tag.objects.order_by("-usage_count")[:20],
-        "total_results": qs.count(),
+        "total_results": total_results,
     })
 
 
@@ -563,31 +591,37 @@ def search_view(request):
     """Executes thorough keyword scanning against technical records and error tables."""
     form = SearchForm(request.GET or None)
     q = request.GET.get("q", "").strip()
-    results = []
+    results = None
+    results_count = 0
 
     if q and len(q) >= 2:
-        qs = Article.objects.filter(status=Article.Status.PUBLISHED).select_related("author", "category").prefetch_related("tags")
+        qs = (
+            Article.objects.filter(status=Article.Status.PUBLISHED)
+            .select_related("author", "category")
+            .prefetch_related("tags")
+        )
 
-        # ── DEPARTMENT ACCESS CONTROL BOUNDARY ENFORCEMENT ──
-        # Superusers and Admins search everything; regular Engineers are isolated to their own domain or public entries
         if not (request.user.is_superuser or request.user.role == "admin"):
             qs = qs.filter(
-                Q(author__department__iexact=request.user.department) | 
-                Q(visibility=Article.Visibility.PUBLIC)
+                Q(author__department__iexact=request.user.department)
+                | Q(visibility=Article.Visibility.PUBLIC)
             )
 
         if not request.user.can_publish():
             qs = qs.exclude(visibility=Article.Visibility.RESTRICTED)
 
-        # Core text-index lookup matrix
         qs = qs.filter(
             Q(title__icontains=q)
             | Q(summary__icontains=q)
             | Q(content__icontains=q)
             | Q(search_keywords__icontains=q)
             | Q(error_codes__icontains=q)
+            | Q(microsoft_products__icontains=q)  
+            | Q(affected_systems__icontains=q)
+            | Q(tech_stack__icontains=q)
+            | Q(project_type__icontains=q)
             | Q(tags__name__icontains=q)
-            | Q(microsoft_product__icontains=q) 
+            | Q(steps__code_snippet__icontains=q)  
         ).distinct()
 
         if form.is_valid():
@@ -597,25 +631,36 @@ def search_view(request):
                 qs = qs.filter(category=form.cleaned_data["category"])
             if form.cleaned_data.get("severity"):
                 qs = qs.filter(severity=form.cleaned_data["severity"])
-            
-            sort = form.cleaned_data.get("sort", "-updated_at")
+
+            sort = form.cleaned_data.get("sort") or "-updated_at"
             qs = qs.order_by(sort)
+
+        results = _paginate(request, qs)
+        results_count = results.paginator.count if hasattr(results, "paginator") else 0
 
         SearchLog.objects.create(
             query=q,
             user=request.user,
-            results_count=qs.count(),
-            ip_address=_get_client_ip(request) if globals().get('_get_client_ip') else "127.0.0.1",
+            results_count=results_count,
+            ip_address=_get_client_ip(request),
         )
 
-        results = _paginate(request, qs)
+    query_params = request.GET.copy()
+    if "page" in query_params:
+        del query_params["page"]
 
-    return render(request, "knowledge/search_results.html", {
-        "page_title": f'Search: "{q}"' if q else "Search System Vault",
-        "form": form,
-        "query": q,
-        "results": results,
-    })
+    return render(
+        request,
+        "knowledge/search_results.html",
+        {
+            "page_title": f'Search: "{q}"' if q else "Search System Vault",
+            "form": form,
+            "query": q,
+            "results": results,
+            "results_count": results_count,
+            "query_string": query_params.urlencode(),
+        },
+    )
 
 
 @login_required
@@ -623,46 +668,67 @@ def search_view(request):
 def search_suggestions(request):
     """
     Asynchronous lookup channel grouping type-ahead results live as engineers type.
-    Utilizes caching strategies to limit database scanning overhead.
+    Enforces strict access control and utilizes role-scoped caching strategies.
     """
     q = request.GET.get("q", "").strip()
 
     if len(q) < 2:
         return JsonResponse({"suggestions": []})
 
-    cache_key = f"search_suggestions:{q.lower()}"
+    user = request.user
+    limit = getattr(settings, "SEARCH_SUGGESTIONS_LIMIT", 5)
+    cache_ttl = getattr(settings, "SEARCH_SUGGESTIONS_CACHE_TTL", 300)
+
+    # Scopes cache keys per user role & department to prevent authorization data leaks
+    dept_key = user.department.lower().replace(" ", "_") if user.department else "noddept"
+    role_key = user.role if hasattr(user, "role") else "user"
+    cache_key = f"search_sug:{dept_key}:{role_key}:{q.lower()}"
+
     cached = cache.get(cache_key)
     if cached is not None:
-        return JsonResponse({"suggestions": cached})
+        return JsonResponse({"suggestions": cached, "query": q})
 
-    limit = settings.SEARCH_SUGGESTIONS_LIMIT
     suggestions = []
 
+    # 1. ARTICLE QUERYSET WITH DEPARTMENT ACCESS ISOLATION
+    article_qs = Article.objects.filter(status=Article.Status.PUBLISHED)
+
+    if not (user.is_superuser or user.role == "admin"):
+        article_qs = article_qs.filter(
+            Q(author__department__iexact=user.department)
+            | Q(visibility=Article.Visibility.PUBLIC)
+        )
+
+    if not user.can_publish():
+        article_qs = article_qs.exclude(visibility=Article.Visibility.RESTRICTED)
+
+    # Expanded type-ahead lookup: Title, Error Codes, and Microsoft Product lines
     article_qs = (
-        Article.objects
-        .filter(
-            status=Article.Status.PUBLISHED,
-            title__icontains=q,
+        article_qs.filter(
+            Q(title__icontains=q)
+            | Q(error_codes__icontains=q)
+            | Q(microsoft_products__icontains=q)
         )
         .select_related("category")
         .order_by("-views_count")[:limit]
     )
-    if not request.user.can_publish():
-        article_qs = article_qs.exclude(visibility=Article.Visibility.RESTRICTED)
 
     for art in article_qs:
         suggestions.append({
             "type": "article",
             "label": art.title,
             "url": art.get_absolute_url(),
-            "meta": art.category.name,
+            "meta": art.category.name if art.category else "General",
             "article_type": art.article_type,
             "icon": _article_type_icon(art.article_type),
         })
 
+    # 2. CATEGORY MATCHES
     cat_qs = Category.objects.filter(
-        is_active=True, name__icontains=q
-    ).order_by("name")[:4]
+        is_active=True, 
+        name__icontains=q
+    ).order_by("name")[:3]
+    
     for cat in cat_qs:
         suggestions.append({
             "type": "category",
@@ -672,17 +738,19 @@ def search_suggestions(request):
             "icon": "folder",
         })
 
-    tag_qs = Tag.objects.filter(name__icontains=q).order_by("-usage_count")[:4]
+    # 3. TAG MATCHES
+    tag_qs = Tag.objects.filter(name__icontains=q).order_by("-usage_count")[:3]
     for tag in tag_qs:
         suggestions.append({
             "type": "tag",
-            "label": tag.name,
+            "label": f"#{tag.name}",
             "url": tag.get_absolute_url(),
-            "meta": f"{tag.usage_count} articles",
+            "meta": f"{tag.usage_count} record{'s' if tag.usage_count != 1 else ''}",
             "icon": "tag",
         })
+        
+    cache.set(cache_key, suggestions, cache_ttl)
 
-    cache.set(cache_key, suggestions, settings.SEARCH_SUGGESTIONS_CACHE_TTL)
     return JsonResponse({"suggestions": suggestions, "query": q})
 
 

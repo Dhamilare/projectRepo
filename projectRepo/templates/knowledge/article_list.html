@@ -109,13 +109,13 @@
             <div class="flex items-center justify-between border-t border-slate-200/80 pt-6 mt-6 text-xs font-bold text-slate-600">
                 <div>
                     {% if page_obj.has_previous %}
-                    <a href="?page={{ page_obj.previous_page_number }}{% if article_type %}&type={{ article_type }}{% endif %}" class="px-3 py-1.5 bg-white border rounded-lg hover:bg-slate-50 transition-colors">Back</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" class="px-3 py-1.5 bg-white border rounded-lg hover:bg-slate-50 transition-colors">Back</a>
                     {% endif %}
                 </div>
                 <span class="font-normal text-slate-400">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
                 <div>
                     {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if article_type %}&type={{ article_type }}{% endif %}" class="px-3 py-1.5 bg-white border rounded-lg hover:bg-slate-50 transition-colors">Next</a>
+                    <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" class="px-3 py-1.5 bg-white border rounded-lg hover:bg-slate-50 transition-colors">Next</a>
                     {% endif %}
                 </div>
             </div>
