@@ -84,34 +84,32 @@ class MicrosoftEntraBackend(BaseBackend):
             logger.error("No email in Graph profile: %s", profile)
             return None
 
-        azure_oid = profile.get("id", "")
-
-        try:
+        azure_oid = profile.get("id", "").strip()
+        user = None
+        if azure_oid:
             user = User.objects.filter(azure_object_id=azure_oid).first()
-            if user is None:
-                user = User.objects.get(email=email)
-        except User.DoesNotExist:
+        
+        if user is None:
+            user = User.objects.filter(email=email).first()
+
+        if user is None:
             user = User(email=email)
 
-        user.azure_object_id = azure_oid
+        user.azure_object_id = azure_oid or user.azure_object_id or ""
         user.first_name = profile.get("givenName") or user.first_name or ""
         user.last_name = profile.get("surname") or user.last_name or ""
         user.job_title = profile.get("jobTitle") or user.job_title or ""
-        
-        user.department = profile.get("department") or "IT"
-        
-        business_phones = profile.get("businessPhones", [])
-        user.phone = profile.get("mobilePhone") or (business_phones[0] if business_phones else "")
-        
+        user.department = profile.get("department") or user.department or "IT"
+        business_phones = profile.get("businessPhones") or []
+        first_biz_phone = business_phones[0] if isinstance(business_phones, list) and business_phones else ""
+        user.phone = profile.get("mobilePhone") or first_biz_phone or getattr(user, "phone", "")
         user.username = email
         user.is_active = True
-        
-        user.is_staff = (user.role == "admin" or user.is_superuser)
-
+        user_role = getattr(user, "role", None)
+        user.is_staff = (user_role == "admin" or getattr(user, "is_superuser", False))
         user.save()
         logger.info("Entra login successful for: %s (oid=%s, department=%s)", email, azure_oid, user.department)
         return user
-
 
 def build_auth_url(state: str) -> str:
     """Generate the Microsoft OAuth2 authorization URL."""
