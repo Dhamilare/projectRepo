@@ -1,13 +1,25 @@
+import os
 import bleach
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
-from .models import Article, ProjectStep, Comment, Category, Tag, Attachment
+from .models import (
+    Article,
+    Attachment,
+    Category,
+    Comment,
+    Project,
+    ProjectActivity,
+    ProjectDocument,
+    ProjectMember,
+    ResolutionStep,
+    Tag,
+    Team,
+)
 
 User = get_user_model()
 
-# Allowed HTML tags/attributes for the article content body
 ALLOWED_TAGS = [
     "p", "br", "strong", "em", "u", "s", "h2", "h3", "h4",
     "ul", "ol", "li", "blockquote", "pre", "code",
@@ -24,114 +36,359 @@ ALLOWED_ATTRIBUTES = {
     "th": ["colspan", "rowspan"],
 }
 
+ALLOWED_DOCUMENT_EXTENSIONS = {
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".txt", ".md", ".csv", ".vsdx", ".visio", ".zip",
+}
+
+ALLOWED_ATTACHMENT_EXTENSIONS = ALLOWED_DOCUMENT_EXTENSIONS | {
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+    ".log", ".evtx", ".ps1", ".py", ".sh", ".bat", ".cmd",
+    ".json", ".xml", ".yaml", ".yml", ".ini", ".reg",
+}
+
 
 def sanitize_html(html: str) -> str:
-    """Strip disallowed tags/attributes to prevent cross-site scripting (XSS)."""
-    return bleach.clean(html, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, strip=True)
+    return bleach.clean(html or "", tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES, strip=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TAILWIND DESIGN MIXIN
+# TAILWIND LIGHT-MODE FORM MIXIN (CENTURY GOTHIC READY)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TailwindFormMixin:
-    """
-    Programmatically injects clean, unified Tailwind UI styles into form inputs.
-    Engineered cleanly for modern light-mode setups and Century Gothic text styling.
-    """
     def apply_tailwind_styles(self):
-        # Premium Tailwind UI baseline components
-        input_classes = "w-full px-4 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 text-sm font-sans placeholder-slate-400"
-        select_classes = "w-full px-4 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 text-sm font-sans"
-        textarea_classes = "w-full px-4 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 text-sm font-sans resize-y min-h-[100px] placeholder-slate-400"
-        multiselect_classes = "w-full px-4 py-2 bg-white text-slate-800 border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 text-sm font-sans min-h-[120px]"
-        checkbox_classes = "h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 transition duration-150 cursor-pointer"
+        input_classes = (
+            "w-full px-4 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-lg "
+            "shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent "
+            "transition-all duration-200 text-sm placeholder-slate-400"
+        )
+        select_classes = (
+            "w-full px-4 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-lg "
+            "shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent "
+            "transition-all duration-200 text-sm"
+        )
+        textarea_classes = (
+            "w-full px-4 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-lg "
+            "shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent "
+            "transition-all duration-200 text-sm resize-y min-h-[100px] placeholder-slate-400"
+        )
+        multiselect_classes = (
+            "w-full px-3 py-2 bg-white text-slate-800 border border-slate-200 rounded-lg "
+            "shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent "
+            "transition-all duration-200 text-sm min-h-[120px]"
+        )
+        checkbox_classes = (
+            "h-4 w-4 text-blue-600 bg-white border-slate-300 rounded "
+            "focus:ring-blue-500 focus:ring-2 transition duration-150 cursor-pointer"
+        )
+        file_classes = (
+            "block w-full text-sm text-slate-600 bg-white border border-slate-200 rounded-lg "
+            "file:mr-4 file:py-2.5 file:px-4 file:rounded-l-lg file:border-0 "
+            "file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 "
+            "hover:file:bg-blue-100 cursor-pointer"
+        )
 
-        for field_name, field in self.fields.items():
+        for _, field in self.fields.items():
             widget = field.widget
-            
-            # Preserve existing custom attributes while layering Tailwind updates safely
+            if isinstance(widget, forms.HiddenInput):
+                continue
+
             current_attrs = widget.attrs
-            
+            existing = current_attrs.get("class", "")
+
             if isinstance(widget, forms.Textarea):
-                current_attrs["class"] = textarea_classes if "class" not in current_attrs else f"{textarea_classes} {current_attrs['class']}"
+                base = textarea_classes
             elif isinstance(widget, forms.SelectMultiple):
-                current_attrs["class"] = multiselect_classes if "class" not in current_attrs else f"{multiselect_classes} {current_attrs['class']}"
+                base = multiselect_classes
             elif isinstance(widget, forms.Select):
-                current_attrs["class"] = select_classes if "class" not in current_attrs else f"{select_classes} {current_attrs['class']}"
+                base = select_classes
             elif isinstance(widget, forms.CheckboxInput):
-                current_attrs["class"] = checkbox_classes if "class" not in current_attrs else f"{checkbox_classes} {current_attrs['class']}"
+                base = checkbox_classes
+            elif isinstance(widget, (forms.FileInput, forms.ClearableFileInput)):
+                base = file_classes
             else:
-                current_attrs["class"] = input_classes if "class" not in current_attrs else f"{input_classes} {current_attrs['class']}"
-                
+                base = input_classes
+
+            current_attrs["class"] = f"{base} {existing}".strip()
             widget.attrs = current_attrs
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ARTICLE MASTER FORM
+# PROJECT FORMS
 # ─────────────────────────────────────────────────────────────────────────────
 
-class ArticleForm(TailwindFormMixin, forms.ModelForm):
-    """
-    Master operational form managing both Service Resolutions and Playbooks.
-    Tailwind integrated layout configurations map onto dynamic JS switches.
-    """
-
+class ProjectForm(TailwindFormMixin, forms.ModelForm):
     tag_names = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={
-            "placeholder": "Enter tags separated by commas (e.g. Exchange, MFA, Azure AD)…",
+            "placeholder": "e.g. Windows Autopilot, Intune, Entra ID, Zero-Touch…",
             "autocomplete": "off",
         }),
-        help_text="Comma-separated list of tags used for index sorting references.",
+        help_text="Comma-separated tags for fast project lookup.",
+    )
+
+    class Meta:
+        model = Project
+        fields = [
+            "project_code", "title", "client_or_unit", "category",
+            "summary", "scope_notes", "microsoft_products", "tech_stack", "prerequisites",
+            "status", "priority", "start_date", "target_end_date",
+            "project_lead", "visibility", "allowed_teams", "allow_open_collaboration",
+        ]
+        widgets = {
+            "project_code": forms.TextInput(attrs={"placeholder": "Auto-generated if left blank (e.g. PRJ-2026-001)"}),
+            "title": forms.TextInput(attrs={"placeholder": "e.g. Enterprise Windows Autopilot Rollout"}),
+            "client_or_unit": forms.TextInput(attrs={"placeholder": "Client name, Subsidiary, or Business Unit"}),
+            "summary": forms.Textarea(attrs={"rows": 3, "placeholder": "Executive summary of project objectives..."}),
+            "scope_notes": forms.Textarea(attrs={"rows": 4, "placeholder": "In-scope / out-of-scope overview..."}),
+            "microsoft_products": forms.TextInput(attrs={"placeholder": "e.g. Windows Autopilot, Microsoft Intune, Entra ID"}),
+            "tech_stack": forms.TextInput(attrs={"placeholder": "e.g. PowerShell, Graph API, Conditional Access"}),
+            "prerequisites": forms.Textarea(attrs={"rows": 3, "placeholder": "Licensing, network, or identity prerequisites..."}),
+            "start_date": forms.DateInput(attrs={"type": "date"}),
+            "target_end_date": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        self.fields["category"].queryset = Category.objects.filter(is_active=True).order_by("name")
+        self.fields["project_lead"].queryset = User.objects.filter(
+            is_active=True, role__in=[User.Role.ADMIN, User.Role.LEAD, User.Role.ENGINEER]
+        ).order_by("first_name", "last_name")
+        self.fields["allowed_teams"].queryset = Team.objects.filter(is_active=True).order_by("name")
+
+        if self.instance.pk:
+            self.fields["tag_names"].initial = ", ".join(
+                self.instance.tags.values_list("name", flat=True)
+            )
+            self.fields["project_code"].disabled = True
+
+        self.apply_tailwind_styles()
+
+    def clean_title(self):
+        title = self.cleaned_data.get("title", "").strip()
+        if len(title) < 4:
+            raise forms.ValidationError("Project title must be at least 4 characters.")
+        return title
+
+    def clean(self):
+        cleaned = super().clean()
+        start = cleaned.get("start_date")
+        target = cleaned.get("target_end_date")
+        if start and target and target < start:
+            self.add_error("target_end_date", "Target completion date cannot precede start date.")
+        return cleaned
+
+    def save(self, commit=True):
+        project = super().save(commit=False)
+        if commit:
+            project.save()
+            self.save_m2m()
+            self._save_tags(project)
+        return project
+
+    def _save_tags(self, project):
+        raw = self.cleaned_data.get("tag_names", "")
+        names = [t.strip() for t in raw.split(",") if t.strip()]
+        tags = []
+        for name in names:
+            tag = Tag.objects.filter(name__iexact=name).first()
+            if not tag:
+                tag = Tag.objects.create(name=name)
+            tags.append(tag)
+        project.tags.set(tags)
+
+
+class ProjectDocumentUploadForm(TailwindFormMixin, forms.ModelForm):
+    class Meta:
+        model = ProjectDocument
+        fields = ["document_type", "title", "file", "status", "change_notes"]
+        widgets = {
+            "title": forms.TextInput(attrs={"placeholder": "e.g. Windows Autopilot Statement of Work v1"}),
+            "change_notes": forms.Textarea(attrs={"rows": 3, "placeholder": "Describe updates, scope additions, or sign-off notes..."}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.project = kwargs.pop("project", None)
+        self.user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+
+        can_approve = bool(self.project and self.user and self.project.can_approve_documents(self.user))
+        if not can_approve:
+            self.fields["status"].choices = [
+                (ProjectDocument.Status.DRAFT, "Draft (Work in Progress)"),
+                (ProjectDocument.Status.IN_REVIEW, "Submit for Review"),
+            ]
+        else:
+            self.fields["status"].choices = [
+                (ProjectDocument.Status.DRAFT, "Draft (Work in Progress)"),
+                (ProjectDocument.Status.IN_REVIEW, "In Review"),
+                (ProjectDocument.Status.APPROVED, "Approved"),
+            ]
+        self.apply_tailwind_styles()
+
+    def clean_file(self):
+        file_obj = self.cleaned_data.get("file")
+        if not file_obj:
+            raise forms.ValidationError("Please attach a document file.")
+
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext not in ALLOWED_DOCUMENT_EXTENSIONS:
+            raise forms.ValidationError(
+                f"Unsupported file format '{ext}'. Allowed formats: {', '.join(sorted(ALLOWED_DOCUMENT_EXTENSIONS))}"
+            )
+
+        max_mb = getattr(settings, "MAX_DOCUMENT_SIZE_MB", 50)
+        if file_obj.size > max_mb * 1024 * 1024:
+            raise forms.ValidationError(f"Document exceeds maximum allowed size of {max_mb} MB.")
+        return file_obj
+
+
+class ProjectDocumentReviewForm(TailwindFormMixin, forms.Form):
+    decision = forms.ChoiceField(
+        choices=[
+            (ProjectDocument.Status.APPROVED, "Approve Document"),
+            (ProjectDocument.Status.DRAFT, "Return to Draft (Needs Revision)"),
+        ]
+    )
+    review_notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Provide approval remarks or revision instructions..."}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.apply_tailwind_styles()
+
+
+class ProjectActivityForm(TailwindFormMixin, forms.ModelForm):
+    class Meta:
+        model = ProjectActivity
+        fields = [
+            "step_number", "phase", "title", "description",
+            "code_snippet", "code_language", "expected_outcome",
+            "warning", "tip", "status", "assigned_to",
+            "due_date", "estimated_minutes", "is_optional",
+        ]
+        widgets = {
+            "step_number": forms.NumberInput(attrs={"min": "1", "placeholder": "Auto"}),
+            "title": forms.TextInput(attrs={"placeholder": "e.g. Configure Autopilot Deployment Profile in Intune"}),
+            "description": forms.Textarea(attrs={"rows": 4, "placeholder": "Detailed action plan instructions for engineers..."}),
+            "code_snippet": forms.Textarea(attrs={
+                "rows": 5,
+                "placeholder": "# PowerShell, Graph API, or CLI commands...",
+                "class": "bg-slate-50 font-mono text-xs",
+            }),
+            "code_language": forms.TextInput(attrs={"placeholder": "powershell"}),
+            "expected_outcome": forms.Textarea(attrs={"rows": 2, "placeholder": "What confirms this step succeeded?"}),
+            "warning": forms.Textarea(attrs={"rows": 2, "placeholder": "Critical risks or prerequisites before executing..."}),
+            "tip": forms.Textarea(attrs={"rows": 2, "placeholder": "Helpful engineering shortcuts or gotchas..."}),
+            "due_date": forms.DateInput(attrs={"type": "date"}),
+            "estimated_minutes": forms.NumberInput(attrs={"min": "1", "placeholder": "Minutes"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.project = kwargs.pop("project", None)
+        super().__init__(*args, **kwargs)
+        self.fields["step_number"].required = False
+        self.fields["assigned_to"].queryset = User.objects.filter(
+            is_active=True, role__in=[User.Role.ADMIN, User.Role.LEAD, User.Role.ENGINEER]
+        ).order_by("first_name", "last_name")
+        self.apply_tailwind_styles()
+
+    def clean_step_number(self):
+        step_num = self.cleaned_data.get("step_number")
+        if step_num is not None and self.project:
+            qs = ProjectActivity.objects.filter(project=self.project, step_number=step_num)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError(f"Step #{step_num} already exists in this project.")
+        return step_num
+
+
+class ProjectMemberForm(TailwindFormMixin, forms.ModelForm):
+    class Meta:
+        model = ProjectMember
+        fields = ["user", "role", "can_upload_docs", "can_approve_docs"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["user"].queryset = User.objects.filter(is_active=True).order_by("first_name", "last_name")
+        self.apply_tailwind_styles()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SUPPORT RESOLUTION & KNOWLEDGE BASE FORMS
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ArticleForm(TailwindFormMixin, forms.ModelForm):
+    tag_names = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            "placeholder": "e.g. Autopilot, 80180014, TPM, Hybrid Join…",
+            "autocomplete": "off",
+        }),
+        help_text="Comma-separated tags for fast search indexing.",
+    )
+    change_summary = forms.CharField(
+        required=False,
+        max_length=300,
+        widget=forms.TextInput(attrs={
+            "placeholder": "Briefly describe what you updated (saved to revision history)...",
+        }),
     )
 
     class Meta:
         model = Article
         fields = [
-            "title", "article_type", "category", "summary", "content", "search_keywords",
-            "status", "visibility", "severity", "affected_systems", "error_codes",
-            "microsoft_products", "resolution_type", "time_to_resolve_minutes",
-            "project_type", "tech_stack", "difficulty_level", "estimated_duration", "prerequisites",
+            "title", "article_type", "category", "related_project",
+            "summary", "symptoms", "root_cause", "content", "verification_steps",
+            "search_keywords", "status", "visibility",
+            "allowed_teams", "allowed_users", "allow_engineer_collaboration",
+            "severity", "affected_systems", "error_codes", "microsoft_products",
+            "resolution_type", "time_to_resolve_minutes",
+            "tech_stack", "difficulty_level", "estimated_duration", "prerequisites",
             "is_featured", "is_pinned", "needs_review", "contributors", "related_articles",
         ]
         widgets = {
-            "title": forms.TextInput(attrs={"placeholder": "Specify exact symptom or playbook objective..."}),
+            "title": forms.TextInput(attrs={"placeholder": "Specify exact symptom, error, or operational runbook title..."}),
             "article_type": forms.Select(attrs={"id": "id_article_type"}),
-            "category": forms.Select(),
-            "summary": forms.Textarea(attrs={"rows": 3, "placeholder": "Provide a brief description shown in listings..."}),
-            "content": forms.Textarea(attrs={"rows": 18, "id": "article-content-editor", "class": "rich-editor"}),
-            "search_keywords": forms.TextInput(attrs={"placeholder": "Keywords for engine search optimization..."}),
-            "status": forms.Select(),
-            "visibility": forms.Select(),
-            "severity": forms.Select(),
-            "affected_systems": forms.TextInput(attrs={"placeholder": "e.g. Exchange Online, Entra ID, Local SAN..."}),
-            "error_codes": forms.TextInput(attrs={"placeholder": "e.g. 0x800CCC0F, ERR_CONN_REFUSED..."}),
-            "microsoft_products": forms.TextInput(attrs={"placeholder": "e.g. Microsoft 365, Exchange Server 2019..."}),
-            "resolution_type": forms.TextInput(attrs={"placeholder": "e.g. Mailbox Replication, Tenant Hardening..."}),
+            "summary": forms.Textarea(attrs={"rows": 2, "placeholder": "Concise executive summary shown in search & cards..."}),
+            "symptoms": forms.Textarea(attrs={"rows": 3, "placeholder": "Describe user-facing symptoms or alert indicators..."}),
+            "root_cause": forms.Textarea(attrs={"rows": 3, "placeholder": "Document the confirmed technical root cause..."}),
+            "content": forms.Textarea(attrs={"rows": 14, "id": "article-content-editor", "class": "rich-editor"}),
+            "verification_steps": forms.Textarea(attrs={"rows": 3, "placeholder": "How to verify the fix worked..."}),
+            "search_keywords": forms.TextInput(attrs={"placeholder": "Additional lookup keywords or aliases..."}),
+            "affected_systems": forms.TextInput(attrs={"placeholder": "e.g. Windows 11, Intune Enrollment, Entra ID..."}),
+            "error_codes": forms.TextInput(attrs={"placeholder": "e.g. 0x80180014, 80070774..."}),
+            "microsoft_products": forms.TextInput(attrs={"placeholder": "e.g. Windows Autopilot, Intune, Defender..."}),
+            "resolution_type": forms.TextInput(attrs={"placeholder": "e.g. Policy Reconfiguration, Script Fix, Registry Patch..."}),
             "time_to_resolve_minutes": forms.NumberInput(attrs={"placeholder": "0", "min": "0"}),
-            "project_type": forms.TextInput(attrs={"placeholder": "e.g. Cloud Tenant Migration, Forest Trust Build..."}),
-            "tech_stack": forms.TextInput(attrs={"placeholder": "e.g. Exchange Hybrid, Azure AD Connect..."}),
-            "difficulty_level": forms.Select(),
-            "estimated_duration": forms.TextInput(attrs={"placeholder": "e.g. 3 hours, 2 days..."}),
-            "prerequisites": forms.Textarea(attrs={"rows": 4, "placeholder": "Specify configuration requirements or administrative access needed..."}),
+            "tech_stack": forms.TextInput(attrs={"placeholder": "e.g. Intune, PowerShell, Graph API..."}),
+            "estimated_duration": forms.TextInput(attrs={"placeholder": "e.g. 30 minutes"}),
+            "prerequisites": forms.Textarea(attrs={"rows": 3, "placeholder": "Required admin roles or access permissions..."}),
         }
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
-        # Enforce filtering constraints onto raw relation sets
         self.fields["category"].queryset = Category.objects.filter(is_active=True).order_by("name")
+        if self.user:
+            self.fields["related_project"].queryset = Project.objects.visible_to(self.user).order_by("title")
+        else:
+            self.fields["related_project"].queryset = Project.objects.all().order_by("title")
 
         qs = Article.objects.filter(status=Article.Status.PUBLISHED)
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
         self.fields["related_articles"].queryset = qs.order_by("title")[:200]
-
         self.fields["contributors"].queryset = User.objects.filter(is_active=True).order_by("first_name", "last_name")
+        self.fields["allowed_teams"].queryset = Team.objects.filter(is_active=True).order_by("name")
+        self.fields["allowed_users"].queryset = User.objects.filter(is_active=True).order_by("first_name", "last_name")
 
-        # Dynamic authorization constraint filters
         if self.user and not self.user.can_publish():
             self.fields["status"].choices = [
                 (Article.Status.DRAFT, "Draft"),
@@ -142,12 +399,22 @@ class ArticleForm(TailwindFormMixin, forms.ModelForm):
             self.fields["tag_names"].initial = ", ".join(
                 self.instance.tags.values_list("name", flat=True)
             )
-            
-        # Programmatically apply corporate Tailwind layout structures
+        else:
+            self.fields["change_summary"].widget = forms.HiddenInput()
+
         self.apply_tailwind_styles()
 
     def clean_content(self):
         return sanitize_html(self.cleaned_data.get("content", ""))
+
+    def clean_symptoms(self):
+        return sanitize_html(self.cleaned_data.get("symptoms", ""))
+
+    def clean_root_cause(self):
+        return sanitize_html(self.cleaned_data.get("root_cause", ""))
+
+    def clean_verification_steps(self):
+        return sanitize_html(self.cleaned_data.get("verification_steps", ""))
 
     def clean_title(self):
         title = self.cleaned_data.get("title", "").strip()
@@ -157,28 +424,23 @@ class ArticleForm(TailwindFormMixin, forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        article_type = cleaned.get("article_type")
-        
-        if article_type == Article.ArticleType.SUPPORT:
-            if not cleaned.get("severity"):
-                self.add_error("severity", "Severity is required for support articles.")
+        if cleaned.get("article_type") == Article.ArticleType.SUPPORT and not cleaned.get("severity"):
+            self.add_error("severity", "Severity is required for support resolution articles.")
         return cleaned
 
     def save(self, commit=True):
         article = super().save(commit=False)
         if commit:
             article.save()
-            self._save_tags(article)
             self.save_m2m()
+            self._save_tags(article)
         return article
 
     def _save_tags(self, article):
-        """Resolves raw comma strings into synchronized relational database records safely."""
-        tag_names_raw = self.cleaned_data.get("tag_names", "")
-        tag_names = [t.strip() for t in tag_names_raw.split(",") if t.strip()]
+        raw = self.cleaned_data.get("tag_names", "")
+        names = [t.strip() for t in raw.split(",") if t.strip()]
         tags = []
-        for name in tag_names:
-            # BUGFIX: Lowercase conversion match optimization prevents key parsing crash vectors on PostgreSQL
+        for name in names:
             tag = Tag.objects.filter(name__iexact=name).first()
             if not tag:
                 tag = Tag.objects.create(name=name)
@@ -186,29 +448,25 @@ class ArticleForm(TailwindFormMixin, forms.ModelForm):
         article.tags.set(tags)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PROJECT EXECUTION STEP LAYOUT
-# ─────────────────────────────────────────────────────────────────────────────
-
-class ProjectStepForm(TailwindFormMixin, forms.ModelForm):
+class ResolutionStepForm(TailwindFormMixin, forms.ModelForm):
     class Meta:
-        model = ProjectStep
+        model = ResolutionStep
         fields = [
-            "step_number", "title", "description", "code_snippet", 
+            "step_number", "title", "description", "code_snippet",
             "code_language", "warning", "tip", "estimated_minutes", "is_optional",
         ]
         widgets = {
             "step_number": forms.HiddenInput(),
-            "title": forms.TextInput(attrs={"placeholder": "Provide an absolute milestone title…"}),
-            "description": forms.Textarea(attrs={"rows": 4, "placeholder": "Engineering task details instructions..."}),
+            "title": forms.TextInput(attrs={"placeholder": "Step title (e.g. Check Autopilot Hardware Hash)..."}),
+            "description": forms.Textarea(attrs={"rows": 3, "placeholder": "Detailed troubleshooting or execution instructions..."}),
             "code_snippet": forms.Textarea(attrs={
-                "rows": 5, 
-                "placeholder": "# Enter your PowerShell, CLI, or config blocks here…",
-                "class": "bg-slate-50 border-slate-200 text-slate-900 font-mono focus:bg-white text-xs",
+                "rows": 4,
+                "placeholder": "# PowerShell, CMD, or diagnostic commands...",
+                "class": "bg-slate-50 font-mono text-xs",
             }),
             "code_language": forms.TextInput(attrs={"placeholder": "powershell"}),
-            "warning": forms.Textarea(attrs={"rows": 2, "placeholder": "⚠ Critical configuration risks or production loss indicators…"}),
-            "tip": forms.Textarea(attrs={"rows": 2, "placeholder": "💡 Helpful execution shortcuts or monitoring checks…"}),
+            "warning": forms.Textarea(attrs={"rows": 2, "placeholder": "Critical risk or prerequisite warning..."}),
+            "tip": forms.Textarea(attrs={"rows": 2, "placeholder": "Helpful verification tip..."}),
             "estimated_minutes": forms.NumberInput(attrs={"min": "1", "placeholder": "Minutes"}),
         }
 
@@ -217,10 +475,10 @@ class ProjectStepForm(TailwindFormMixin, forms.ModelForm):
         self.apply_tailwind_styles()
 
 
-ProjectStepFormSet = forms.inlineformset_factory(
+ResolutionStepFormSet = forms.inlineformset_factory(
     Article,
-    ProjectStep,
-    form=ProjectStepForm,
+    ResolutionStep,
+    form=ResolutionStepForm,
     extra=1,
     can_delete=True,
     min_num=0,
@@ -228,17 +486,17 @@ ProjectStepFormSet = forms.inlineformset_factory(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# COLLABORATIVE INTERACTION MATRIX
+# COLLABORATION, ATTACHMENTS, TAXONOMIES & SEARCH
 # ─────────────────────────────────────────────────────────────────────────────
 
 class CommentForm(TailwindFormMixin, forms.ModelForm):
     class Meta:
         model = Comment
-        fields = ["content"]
+        fields = ["content", "is_resolution_note"]
         widgets = {
             "content": forms.Textarea(attrs={
-                "rows": 4,
-                "placeholder": "Provide diagnostic modifications, troubleshooting adjustments, or documentation updates…",
+                "rows": 3,
+                "placeholder": "Share resolution updates, findings, or coordinate next steps with engineers...",
             })
         }
 
@@ -248,24 +506,18 @@ class CommentForm(TailwindFormMixin, forms.ModelForm):
 
     def clean_content(self):
         content = self.cleaned_data.get("content", "").strip()
-        if len(content) < 10:
-            raise forms.ValidationError("Comment must contain at least 10 characters.")
+        if len(content) < 4:
+            raise forms.ValidationError("Comment must contain at least 4 characters.")
         return bleach.clean(content, tags=["p", "br", "strong", "em", "code"], strip=True)
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# REPOSITORY DIGITAL ASSETS FORM
-# ─────────────────────────────────────────────────────────────────────────────
 
 class AttachmentForm(TailwindFormMixin, forms.ModelForm):
     class Meta:
         model = Attachment
-        fields = ["file"]
+        fields = ["attachment_kind", "file", "description"]
         widgets = {
-            "file": forms.FileInput(attrs={
-                "accept": "*/*",
-                "class": "block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer file:transition-all"
-            }),
+            "description": forms.TextInput(attrs={"placeholder": "Optional caption or screenshot description..."}),
+            "file": forms.FileInput(attrs={"accept": "*/*"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -273,57 +525,92 @@ class AttachmentForm(TailwindFormMixin, forms.ModelForm):
         self.apply_tailwind_styles()
 
     def clean_file(self):
-        file = self.cleaned_data.get("file")
-        if not file:
-            return file
-        max_size = settings.MAX_ATTACHMENT_SIZE_MB * 1024 * 1024
-        if file.size > max_size:
-            raise forms.ValidationError(
-                f"File payload size configuration limits exceeded. Maximum cap is {settings.MAX_ATTACHMENT_SIZE_MB} MB."
-            )
-        return file
+        file_obj = self.cleaned_data.get("file")
+        if not file_obj:
+            return file_obj
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext and ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
+            raise forms.ValidationError(f"File extension '{ext}' is not permitted for security reasons.")
+        max_mb = getattr(settings, "MAX_ATTACHMENT_SIZE_MB", 25)
+        if file_obj.size > max_mb * 1024 * 1024:
+            raise forms.ValidationError(f"File exceeds maximum size limit of {max_mb} MB.")
+        return file_obj
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# EXTENSIVE SEARCH PARAMETERS FRAMEWORK
-# ─────────────────────────────────────────────────────────────────────────────
+class TeamForm(TailwindFormMixin, forms.ModelForm):
+    class Meta:
+        model = Team
+        fields = ["name", "description", "lead", "members", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"placeholder": "e.g. Modern Workplace & Autopilot"}),
+            "description": forms.Textarea(attrs={"rows": 2, "placeholder": "Team scope and responsibilities..."}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["lead"].queryset = User.objects.filter(is_active=True).order_by("first_name", "last_name")
+        self.fields["members"].queryset = User.objects.filter(is_active=True).order_by("first_name", "last_name")
+        self.apply_tailwind_styles()
+
+
+class CategoryForm(TailwindFormMixin, forms.ModelForm):
+    class Meta:
+        model = Category
+        fields = ["name", "category_type", "parent", "color_hex", "sort_order", "description", "allowed_teams", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"placeholder": "e.g. Windows Autopilot"}),
+            "color_hex": forms.TextInput(attrs={"type": "color"}),
+            "description": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["parent"].queryset = Category.objects.filter(is_active=True, parent=None).order_by("name")
+        self.fields["allowed_teams"].queryset = Team.objects.filter(is_active=True).order_by("name")
+        self.apply_tailwind_styles()
+
 
 class SearchForm(TailwindFormMixin, forms.Form):
     q = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={
-            "placeholder": "Search resolutions, playbooks, error codes or keywords…",
+            "placeholder": "Search projects, SOW/As-Built docs, resolutions, error codes…",
             "autocomplete": "off",
             "data-search-suggestions": "true",
-        })
+        }),
+    )
+    scope = forms.ChoiceField(
+        required=False,
+        choices=[
+            ("all", "Projects & Knowledge Base"),
+            ("projects", "Projects & Deliverables Only"),
+            ("articles", "Support Resolutions & Guides Only"),
+        ],
+        initial="all",
     )
     article_type = forms.ChoiceField(
         required=False,
-        choices=[("", "All Documentation Types")] + list(Article.ArticleType.choices),
-        widget=forms.Select(),
+        choices=[("", "All Article Types")] + list(Article.ArticleType.choices),
     )
     category = forms.ModelChoiceField(
         required=False,
         queryset=Category.objects.filter(is_active=True).order_by("name"),
-        empty_label="All Tech Taxonomies",
-        widget=forms.Select(),
+        empty_label="All Categories",
     )
     severity = forms.ChoiceField(
         required=False,
-        choices=[("", "Any Incident Severity")] + list(Article.Severity.choices),
-        widget=forms.Select(),
+        choices=[("", "Any Severity")] + list(Article.Severity.choices),
     )
     sort = forms.ChoiceField(
         required=False,
         choices=[
-            ("-updated_at", "Recently Updated Logs"),
-            ("-published_at", "Recently Deployed Records"),
-            ("-views_count", "Highest View Telemetry"),
-            ("-helpful_votes", "Peer Verified Resolutions"),
-            ("title", "Alphabetical Sort A–Z"),
+            ("-updated_at", "Recently Updated"),
+            ("-published_at", "Recently Published"),
+            ("-views_count", "Most Viewed"),
+            ("-helpful_votes", "Most Helpful"),
+            ("title", "Title A–Z"),
         ],
         initial="-updated_at",
-        widget=forms.Select(),
     )
 
     def __init__(self, *args, **kwargs):

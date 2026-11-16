@@ -4,68 +4,169 @@
 
 {% block content %}
 <div class="space-y-8">
-    
-    <div class="bg-white border border-slate-200/60 p-6 md:p-8 rounded-xl shadow-2xs flex flex-col md:flex-row md:items-center md:justify-between gap-6 relative overflow-hidden">
+
+    <!-- Profile Identity Header -->
+    <div class="bg-white border border-slate-200 p-6 md:p-8 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div class="flex items-center space-x-5">
-            <div class="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-black text-xl flex items-center justify-center shadow-md shadow-blue-100 border-2 border-white select-none shrink-0">
+            <div class="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-black text-xl flex items-center justify-center shadow-md border-2 border-white select-none shrink-0">
                 {{ request.user.initials }}
             </div>
             <div class="space-y-1 min-w-0">
-                <h1 class="text-xl font-black text-slate-900 leading-none flex items-center">
+                <h1 class="text-xl font-extrabold text-slate-900 leading-none">
                     {{ request.user.full_name }}
                 </h1>
-                <p class="text-xs font-bold text-blue-600 font-sans tracking-wide">{{ request.user.job_title|default:"Systems Engineer" }} <span class="text-slate-300 mx-1.5">|</span> <span class="text-slate-400 font-medium font-sans uppercase tracking-wider text-2xs">{{ request.user.department|default:"Infrastructure Ops" }}</span></p>
+                <p class="text-xs font-bold text-blue-600 tracking-wide">
+                    {{ request.user.job_title|default:"Systems Engineer" }}
+                    <span class="text-slate-300 mx-1.5">|</span>
+                    <span class="text-slate-500 font-medium uppercase tracking-wider text-2xs">{{ request.user.department|default:"IT Operations" }}</span>
+                </p>
                 <p class="text-3xs font-mono text-slate-400 pt-0.5 truncate max-w-xs md:max-w-md">{{ request.user.email }}</p>
             </div>
         </div>
 
-        <div class="flex items-center space-x-8 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100 text-center text-xs shrink-0 font-sans">
-            <div><p class="text-4xs uppercase tracking-widest text-slate-400 font-extrabold">Auth Role Attribute</p><p class="font-black text-slate-800 uppercase tracking-wider text-2xs bg-slate-100 border px-2 py-0.5 rounded mt-1">{{ request.user.get_role_display }}</p></div>
-            <div><p class="text-4xs uppercase tracking-widest text-slate-400 font-extrabold">Auth Sessions</p><p class="text-xl font-black text-slate-900 mt-0.5">{{ request.user.login_count }}</p></div>
-            <div><p class="text-4xs uppercase tracking-widest text-slate-400 font-extrabold">Vault Builds</p><p class="text-xl font-black text-slate-900 mt-0.5">{{ total_articles }}</p></div>
+        <div class="flex flex-wrap items-center gap-6 md:gap-8 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100 text-center text-xs shrink-0">
+            <div>
+                <p class="text-3xs uppercase tracking-widest text-slate-400 font-bold">System Role</p>
+                <p class="font-bold text-slate-800 uppercase tracking-wider text-2xs bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-0.5 rounded mt-1">
+                    {{ request.user.get_role_display }}
+                </p>
+            </div>
+            <div>
+                <p class="text-3xs uppercase tracking-widest text-slate-400 font-bold">Projects</p>
+                <p class="text-xl font-extrabold text-slate-900 mt-0.5">{{ total_projects|default:0 }}</p>
+            </div>
+            <div>
+                <p class="text-3xs uppercase tracking-widest text-slate-400 font-bold">Articles</p>
+                <p class="text-xl font-extrabold text-slate-900 mt-0.5">{{ total_articles|default:0 }}</p>
+            </div>
+            <div>
+                <p class="text-3xs uppercase tracking-widest text-slate-400 font-bold">Logins</p>
+                <p class="text-xl font-extrabold text-slate-900 mt-0.5">{{ request.user.login_count }}</p>
+            </div>
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs space-y-4 text-xs">
-            <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b pb-2">Microsoft Entra Identity Synchronizations</h3>
-            
-            <div class="space-y-3 font-sans font-medium text-slate-600">
-                <div class="space-y-0.5"><p class="text-4xs uppercase tracking-wider text-slate-400 font-extrabold">Azure Active Catalog Object ID (OID)</p><p class="font-mono font-bold text-slate-800 break-all select-all text-2xs">{{ request.user.azure_object_id|default:"Manually Synced Local Profile" }}</p></div>
-                <div class="space-y-0.5"><p class="text-4xs uppercase tracking-wider text-slate-400 font-extrabold">Azure Active Catalog Tenant ID (TID)</p><p class="font-mono font-bold text-slate-800 break-all select-all text-2xs">{{ request.user.azure_tenant_id|default:"N/A" }}</p></div>
-                <div class="space-y-0.5"><p class="text-4xs uppercase tracking-wider text-slate-400 font-extrabold">Corporate Phone Node Mapping</p><p class="font-bold text-slate-800">{{ request.user.phone|default:"Unassigned" }}</p></div>
-                <div class="space-y-0.5"><p class="text-4xs uppercase tracking-wider text-slate-400 font-extrabold">Session Trace IP Connection Handshake</p><p class="font-mono font-bold text-slate-800">{{ request.user.last_login_ip|default:"127.0.0.1" }}</p></div>
+
+        <!-- Left Column: Entra Sync & Teams -->
+        <div class="space-y-6">
+            <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-4 text-xs">
+                <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">
+                    Microsoft Entra Identity Sync
+                </h3>
+
+                <div class="space-y-3 font-medium text-slate-600">
+                    <div class="space-y-0.5">
+                        <p class="text-3xs uppercase tracking-wider text-slate-400 font-bold">Azure Object ID (OID)</p>
+                        <p class="font-mono font-bold text-slate-800 break-all select-all text-2xs">{{ request.user.azure_object_id|default:"Local / Unlinked Account" }}</p>
+                    </div>
+                    <div class="space-y-0.5">
+                        <p class="text-3xs uppercase tracking-wider text-slate-400 font-bold">Azure Tenant ID (TID)</p>
+                        <p class="font-mono font-bold text-slate-800 break-all select-all text-2xs">{{ request.user.azure_tenant_id|default:"N/A" }}</p>
+                    </div>
+                    <div class="space-y-0.5">
+                        <p class="text-3xs uppercase tracking-wider text-slate-400 font-bold">Corporate Phone</p>
+                        <p class="font-bold text-slate-800">{{ request.user.phone|default:"Unassigned" }}</p>
+                    </div>
+                    <div class="space-y-0.5">
+                        <p class="text-3xs uppercase tracking-wider text-slate-400 font-bold">Last Login IP</p>
+                        <p class="font-mono font-bold text-slate-800">{{ request.user.last_login_ip|default:"127.0.0.1" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-3 text-xs">
+                <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">
+                    Assigned Engineering Teams
+                </h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for team in request.user.teams.all %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 text-2xs font-bold">
+                        {{ team.name }}
+                    </span>
+                    {% empty %}
+                    <p class="text-2xs text-slate-400">No engineering teams assigned yet.</p>
+                    {% endfor %}
+                </div>
             </div>
         </div>
 
-        <div class="lg:col-span-2 space-y-4">
-            <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">My Recent Repository Asset Commit Records</h3>
-            
+        <!-- Right Column: My Projects & My Support Articles -->
+        <div class="lg:col-span-2 space-y-8">
+
+            <!-- My Projects -->
             <div class="space-y-3">
-                {% for art in authored_articles %}
-                <div class="bg-white border border-slate-200/60 p-4 rounded-xl shadow-3xs flex items-center justify-between hover:shadow-2xs transition-all group relative">
-                    <div class="space-y-1 overflow-hidden pr-4">
-                        <div class="flex items-center space-x-2">
-                            <span class="text-4xs font-extrabold uppercase tracking-widest text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded">{{ art.category.name }}</span>
-                            <span class="text-4xs font-bold px-2 py-0.5 rounded border uppercase tracking-wider {% if art.article_type == 'support' %}bg-amber-50 text-amber-700{% else %}bg-blue-50 text-blue-700{% endif %}">{{ art.get_article_type_display }}</span>
-                        </div>
-                        <a href="{{ art.get_absolute_url }}" class="block text-xs font-bold text-slate-700 group-hover:text-blue-600 transition-colors truncate max-w-md pt-0.5">{{ art.title }}</a>
-                        <p class="text-3xs text-slate-400 font-medium font-sans">Latest synchronization save executed on {{ art.updated_at|date:"M d, Y" }}</p>
-                    </div>
-                    
-                    <div class="flex items-center space-x-1.5 bg-slate-50 border px-2 py-1 rounded-md text-3xs font-bold text-slate-700 shrink-0 select-none">
-                        <span>{{ art.views_count }} views</span>
-                    </div>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">My Assigned Projects</h3>
+                    <a href="{% url 'project_list' %}" class="text-2xs font-bold text-blue-600 hover:underline">View All Projects &rarr;</a>
                 </div>
-                {% empty %}
-                <div class="text-center py-12 border border-dashed border-slate-200 rounded-xl bg-white text-xs font-medium text-slate-400">
-                    You haven't authored or committed any structural documentation assets to the central registry vault.
-                </div>
-                {% endfor %}
-            </div>
-        </div>
 
+                <div class="space-y-3">
+                    {% for proj in my_projects %}
+                    <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:border-blue-300 transition-all">
+                        <div class="space-y-1 min-w-0">
+                            <div class="flex items-center flex-wrap gap-2">
+                                <span class="text-3xs font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">{{ proj.project_code }}</span>
+                                <span class="text-3xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{{ proj.category.name }}</span>
+                                <span class="text-3xs font-bold uppercase tracking-wider bg-slate-50 border border-slate-200 text-slate-600 px-2 py-0.5 rounded">{{ proj.get_status_display }}</span>
+                            </div>
+                            <a href="{{ proj.get_absolute_url }}" class="block text-sm font-bold text-slate-800 hover:text-blue-600 truncate">{{ proj.title }}</a>
+                            <p class="text-2xs text-slate-400">Updated {{ proj.updated_at|date:"M d, Y" }}</p>
+                        </div>
+
+                        <div class="shrink-0 text-right space-y-1">
+                            <span class="text-2xs font-bold text-slate-600">Docs: {{ proj.document_compliance_percent }}%</span>
+                            <div class="w-28 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full {% if proj.document_compliance_percent == 100 %}bg-emerald-500{% elif proj.document_compliance_percent >= 50 %}bg-amber-500{% else %}bg-red-500{% endif %}"
+                                     style="width: {{ proj.document_compliance_percent }}%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-8 border border-dashed border-slate-200 rounded-xl bg-white text-xs text-slate-400">
+                        You are not currently assigned to any projects.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- My Authored Support Resolutions & Articles -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">My Recent Support Resolutions &amp; Guides</h3>
+                    <a href="{% url 'article_list' %}" class="text-2xs font-bold text-blue-600 hover:underline">Browse Knowledge Base &rarr;</a>
+                </div>
+
+                <div class="space-y-3">
+                    {% for art in authored_articles %}
+                    <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex items-center justify-between hover:border-blue-300 transition-all group">
+                        <div class="space-y-1 overflow-hidden pr-4">
+                            <div class="flex items-center flex-wrap gap-2">
+                                <span class="text-3xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{{ art.category.name }}</span>
+                                <span class="text-3xs font-bold px-2 py-0.5 rounded border uppercase tracking-wider {% if art.article_type == 'support' %}bg-amber-50 text-amber-700 border-amber-200{% else %}bg-indigo-50 text-indigo-700 border-indigo-200{% endif %}">
+                                    {{ art.get_article_type_display }}
+                                </span>
+                                {% if art.related_project %}
+                                <span class="text-3xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{{ art.related_project.project_code }}</span>
+                                {% endif %}
+                            </div>
+                            <a href="{{ art.get_absolute_url }}" class="block text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors truncate max-w-md pt-0.5">{{ art.title }}</a>
+                            <p class="text-3xs text-slate-400">Version v{{ art.version }} &bull; Updated {{ art.updated_at|date:"M d, Y" }}</p>
+                        </div>
+
+                        <div class="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md text-3xs font-bold text-slate-700 shrink-0">
+                            <span>{{ art.views_count }} views</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-8 border border-dashed border-slate-200 rounded-xl bg-white text-xs text-slate-400">
+                        You haven't authored any support resolutions or guides yet.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
     </div>
 </div>
 {% endblock %}

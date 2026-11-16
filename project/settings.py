@@ -99,6 +99,7 @@ AUTH_USER_MODEL = "projectRepo.User"
 
 AUTHENTICATION_BACKENDS = [
     "projectRepo.backends.MicrosoftEntraBackend",
+    "projectRepo.backends.RepositoryPermissionBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 

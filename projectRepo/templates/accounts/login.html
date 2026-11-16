@@ -3,94 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }} — Enterprise Knowledge Base</title>
+    <title>{{ page_title|default:"Sign In" }} — Enterprise Project & Support Repository</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
-    <style>
-        /* Explicit Enforcements of Century Gothic Typography Rules */
-        @import url('https://fonts.cdnfonts.com/css/century-gothic');
-        body {
-            font-family: 'Century Gothic', system-ui, -apple-system, sans-serif;
-            letter-spacing: -0.01em;
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Century Gothic"', 'CenturyGothic', 'AppleGothic', 'system-ui', 'sans-serif'],
+                    },
+                    fontSize: {
+                        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
+                        '3xs': ['0.625rem', { lineHeight: '0.875rem' }],
+                    }
+                }
+            }
         }
-        .font-sans {
-            font-family: 'Century Gothic', system-ui, -apple-system, sans-serif;
+    </script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        @import url('https://fonts.cdnfonts.com/css/century-gothic');
+        html, body, button, input, select, textarea {
+            font-family: 'Century Gothic', 'CenturyGothic', system-ui, -apple-system, sans-serif;
+            letter-spacing: -0.01em;
         }
     </style>
 </head>
 <body class="h-full bg-slate-50 text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-800">
 
     <div class="flex min-h-screen lg:h-screen overflow-y-auto lg:overflow-hidden" x-data="{ animateForm: false }" x-init="setTimeout(() => animateForm = true, 100)">
-        
-        <div class="relative hidden lg:flex lg:flex-1 bg-white border-r border-slate-100">
+
+        <!-- Left Showcase Panel (Light Theme) -->
+        <div class="relative hidden lg:flex lg:flex-1 bg-white border-r border-slate-200/80">
             <div class="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px] opacity-70"></div>
-            
+
             <div class="relative flex h-full w-full flex-col justify-between p-12 xl:p-16 z-10">
                 <div class="flex items-center space-x-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-200">
                         <svg class="h-5 w-5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0v3.75" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75" />
                         </svg>
                     </div>
-                    <span class="text-xs font-bold tracking-widest text-slate-400 uppercase">Knowledge Base</span>
+                    <span class="text-xs font-bold tracking-widest text-slate-500 uppercase">Project &amp; Support Repository</span>
                 </div>
 
                 <div class="max-w-xl space-y-8 xl:space-y-10 my-auto">
                     <div class="space-y-4">
                         <h1 class="text-3xl xl:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">
-                            The Hub For <br>
-                            <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Engineering Guides & Solutions.</span>
+                            The Central Hub For <br>
+                            <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Projects, Deliverables &amp; Support Fixes.</span>
                         </h1>
                         <p class="text-sm xl:text-base text-slate-500 leading-relaxed font-normal">
-                            Find quick fixes, step-by-step setup guides, and team resources in one place so you never have to solve the same problem twice.
+                            Manage SOWs, Requirements, As-Built documentation, Admin Guides, engineering action checklists, and proven support resolutions in one governed workspace.
                         </p>
                     </div>
 
                     <div class="grid grid-cols-1 gap-4" x-data="{ activePillar: 1 }">
-                        
-                        <div @mouseenter="activePillar = 1" 
-                             :class="activePillar === 1 ? 'border-blue-500 bg-blue-50/50 shadow-sm shadow-blue-100/50 translate-x-1' : 'border-slate-100 bg-white hover:border-slate-200'"
+
+                        <div @mouseenter="activePillar = 1"
+                             :class="activePillar === 1 ? 'border-blue-500 bg-blue-50/50 shadow-sm translate-x-1' : 'border-slate-200/80 bg-white hover:border-slate-300'"
                              class="flex items-start space-x-4 rounded-xl border p-5 transition-all duration-300 transform cursor-default">
-                            <div :class="activePillar === 1 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'" 
+                            <div :class="activePillar === 1 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'"
+                                 class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-300">
+                                <svg class="h-5 w-5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                                </svg>
+                            </div>
+                            <div class="space-y-1">
+                                <h3 class="text-sm font-bold text-slate-800">Project Document Lifecycle</h3>
+                                <p class="text-xs text-slate-500 leading-relaxed">Versioned storage &amp; approval tracking for SOW, Requirements, As-Built, and Admin Guide deliverables.</p>
+                            </div>
+                        </div>
+
+                        <div @mouseenter="activePillar = 2"
+                             :class="activePillar === 2 ? 'border-indigo-500 bg-indigo-50/50 shadow-sm translate-x-1' : 'border-slate-200/80 bg-white hover:border-slate-300'"
+                             class="flex items-start space-x-4 rounded-xl border p-5 transition-all duration-300 transform cursor-default">
+                            <div :class="activePillar === 2 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'"
                                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-300">
                                 <svg class="h-5 w-5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.83-5.83m0 0a8.91 8.91 0 01-12.074-12.074A8.91 8.91 0 008 17a8.91 8.91 0 007.17-3.66z" />
                                 </svg>
                             </div>
                             <div class="space-y-1">
-                                <h3 class="text-sm font-bold text-slate-800">Support Solutions</h3>
-                                <p class="text-xs text-slate-500 leading-relaxed">Search proven fixes for Exchange, domain settings, security rules, and everyday ticket issues.</p>
+                                <h3 class="text-sm font-bold text-slate-800">Action Checklists &amp; Support Resolutions</h3>
+                                <p class="text-xs text-slate-500 leading-relaxed">Collaborate on live implementation plans, attach screenshots/scripts, and look up proven fixes fast.</p>
                             </div>
                         </div>
 
-                        <div @mouseenter="activePillar = 2" 
-                             :class="activePillar === 2 ? 'border-indigo-500 bg-indigo-50/50 shadow-sm shadow-indigo-100/50 translate-x-1' : 'border-slate-100 bg-white hover:border-slate-200'"
+                        <div @mouseenter="activePillar = 3"
+                             :class="activePillar === 3 ? 'border-emerald-500 bg-emerald-50/50 shadow-sm translate-x-1' : 'border-slate-200/80 bg-white hover:border-slate-300'"
                              class="flex items-start space-x-4 rounded-xl border p-5 transition-all duration-300 transform cursor-default">
-                            <div :class="activePillar === 2 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'" 
+                            <div :class="activePillar === 3 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'"
                                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-300">
                                 <svg class="h-5 w-5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 2.24a4.5 4.5 0 112.83 0M12 18.75m-2.25 0a2.25 2.25 0 114.5 0 2.25 2.25 0 01-4.5 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286z" />
                                 </svg>
                             </div>
                             <div class="space-y-1">
-                                <h3 class="text-sm font-bold text-slate-800">Setup & Deployment Guides</h3>
-                                <p class="text-xs text-slate-500 leading-relaxed">Follow clear, step-by-step instructions for building and configuring IT infrastructure.</p>
-                            </div>
-                        </div>
-
-                        <div @mouseenter="activePillar = 3" 
-                             :class="activePillar === 3 ? 'border-emerald-500 bg-emerald-50/50 shadow-sm shadow-emerald-100/50 translate-x-1' : 'border-slate-100 bg-white hover:border-slate-200'"
-                             class="flex items-start space-x-4 rounded-xl border p-5 transition-all duration-300 transform cursor-default">
-                            <div :class="activePillar === 3 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'" 
-                                 class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-300">
-                                <svg class="h-5 w-5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-                                </svg>
-                            </div>
-                            <div class="space-y-1">
-                                <h3 class="text-sm font-bold text-slate-800">Microsoft Integration</h3>
-                                <p class="text-xs text-slate-500 leading-relaxed">Log in securely with your work account. Your access levels adjust automatically based on your team role.</p>
+                                <h3 class="text-sm font-bold text-slate-800">Microsoft Entra ID &amp; Scoped Permissions</h3>
+                                <p class="text-xs text-slate-500 leading-relaxed">Enterprise SSO with team-scoped access boundaries, audit logs, and full administrative governance.</p>
                             </div>
                         </div>
 
@@ -98,20 +109,25 @@
                 </div>
 
                 <div class="flex items-center space-x-6 text-xs text-slate-400 font-normal">
-                    <span>v2.4 System</span>
-                    <span>&copy; 2026 Knowledge Base Repository</span>
+                    <span>Enterprise Edition</span>
+                    <span>&copy; {% now "Y" %} Project &amp; Support Repository</span>
                 </div>
             </div>
         </div>
 
-        
+        <!-- Right Login Column -->
         <div class="flex flex-1 flex-col justify-center min-h-screen lg:min-h-0 px-4 py-12 sm:px-12 md:px-16 lg:flex-none lg:w-[480px] xl:w-[540px] bg-slate-50 relative">
-            
-            {% if messages %}
+
+            {% if messages or error %}
             <div class="absolute top-6 left-4 right-4 space-y-2 z-50">
+                {% if error %}
+                <div class="flex items-center justify-between p-4 rounded-xl text-sm border bg-red-50 border-red-200 text-red-800 shadow-sm">
+                    <span class="font-medium">{{ error }}</span>
+                </div>
+                {% endif %}
                 {% for message in messages %}
                 <div x-data="{ show: true }" x-show="show" x-transition.duration.300ms
-                     class="flex items-center justify-between p-4 rounded-xl text-sm border {% if message.tags == 'error' %}bg-red-50 border-red-100 text-red-800{% else %}bg-emerald-50 border-emerald-100 text-emerald-800{% endif %} shadow-sm">
+                     class="flex items-center justify-between p-4 rounded-xl text-sm border {% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-emerald-50 border-emerald-200 text-emerald-800{% endif %} shadow-sm">
                     <div class="flex items-center space-x-2.5">
                         <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -128,25 +144,25 @@
 
             <div class="mx-auto w-full max-w-sm transition-all duration-700 transform"
                  :class="animateForm ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'">
-                
-                <div class="space-y-6">
+
+                <div class="space-y-4">
                     <div class="flex items-center space-x-3 lg:hidden mb-4">
                         <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75" /></svg>
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" /></svg>
                         </div>
-                        <span class="text-sm font-bold text-slate-800 tracking-tight">Knowledge Base <span class="text-blue-600">Repo</span></span>
+                        <span class="text-sm font-bold text-slate-800 tracking-tight">Project<span class="text-blue-600">Repo</span></span>
                     </div>
 
                     <div class="space-y-2">
-                        <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Sign In To Your Dashboard</h2>
-                        <p class="text-xs text-slate-500 font-normal">Use your company Microsoft 365 work account to log in.</p>
+                        <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Sign In To Your Workspace</h2>
+                        <p class="text-xs text-slate-500 font-normal">Authenticate with your corporate Microsoft 365 account.</p>
                     </div>
                 </div>
 
                 <div class="mt-8">
                     <div class="space-y-6">
-                        <a href="{% url 'microsoft_login' %}" 
-                           class="flex w-full items-center justify-center space-x-3 rounded-lg bg-white px-4 py-3.5 text-sm font-bold text-slate-700 shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition-all duration-200 group active:scale-[0.99]">
+                        <a href="{% url 'microsoft_login' %}"
+                           class="flex w-full items-center justify-center space-x-3 rounded-lg bg-white px-4 py-3.5 text-sm font-bold text-slate-700 shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition-all duration-200 group active:scale-[0.99]">
                             <svg class="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-105" viewBox="0 0 23 23" fill="none">
                                 <path d="M0 0H11V11H0V0Z" fill="#F25022"/>
                                 <path d="M12 0H23V11H12V0Z" fill="#7FBA00"/>
@@ -158,34 +174,33 @@
 
                         <div class="relative flex items-center justify-center">
                             <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                                <div class="w-full border-t border-slate-200/80"></div>
+                                <div class="w-full border-t border-slate-200"></div>
                             </div>
                             <div class="relative bg-slate-50 px-3 text-2xs uppercase tracking-widest text-slate-400 font-bold">
-                                Secure Access
+                                Enterprise SSO
                             </div>
                         </div>
 
-                        <div class="rounded-xl border border-slate-200/60 bg-white p-4 shadow-2xs">
+                        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                             <div class="flex space-x-3">
                                 <svg class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286z" />
                                 </svg>
                                 <div class="space-y-1">
-                                    <h4 class="text-xs font-bold text-slate-800">Automatic Single Sign-On</h4>
-                                    <p class="text-3xs text-slate-400 leading-relaxed font-normal">
-                                        Your permissions are managed through your company Microsoft account. Simply sign in with your work email to get instant access.
+                                    <h4 class="text-xs font-bold text-slate-800">Role-Based &amp; Team-Scoped Access</h4>
+                                    <p class="text-3xs text-slate-500 leading-relaxed font-normal">
+                                        Your project permissions, document upload clearances, and support resolution access are governed by your Microsoft Entra identity and assigned engineering teams.
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-12 text-center">
+                    <div class="mt-10 text-center">
                         <p class="text-3xs text-slate-400 max-w-xs mx-auto leading-relaxed font-normal">
-                            Authorized team members only. All login attempts and search activity are logged for security purposes.
+                            Authorized personnel only. Sign-ins, document downloads, and changes are recorded in the enterprise audit log.
                         </p>
                     </div>
-
                 </div>
             </div>
         </div>
