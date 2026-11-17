@@ -1,121 +1,138 @@
 {% extends 'base.html' %}
 
-{% block title %}Knowledge Base Repository{% endblock %}
+{% block title %}Support Resolutions &amp; Knowledge Base{% endblock %}
 
 {% block content %}
 <div class="space-y-6" x-data="{ currentType: '{{ article_type|default:'all' }}' }">
-    
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 border-b border-slate-200 pb-4">
+
+    <!-- Header & Type Tabs -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-            <h1 class="text-xl font-black text-slate-900 uppercase tracking-tight">Technical Asset Logs</h1>
-            <p class="text-xs text-slate-400">Reviewing {{ total_results }} peer-verified technical operational records</p>
+            <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Support Resolutions &amp; Knowledge Base</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Showing {{ total_results }} accessible technical articles &bull; Looking for project deliverables? <a href="{% url 'project_list' %}" class="text-blue-600 font-bold hover:underline">Go to Projects &rarr;</a></p>
         </div>
-        <div class="flex items-center space-x-1 bg-slate-200/60 p-0.5 rounded-lg text-xs font-bold text-slate-600 self-start sm:self-auto overflow-x-auto max-w-full">
-            <a href="?type=" :class="currentType === 'all' ? 'bg-white text-slate-900 shadow-2xs' : ''" class="px-3 py-1.5 rounded-md transition-all whitespace-nowrap">All Records</a>
-            <a href="?type=support" :class="currentType === 'support' ? 'bg-white text-slate-900 shadow-2xs' : ''" class="px-3 py-1.5 rounded-md transition-all whitespace-nowrap">Support Fixes</a>
-            <a href="?type=project" :class="currentType === 'project' ? 'bg-white text-slate-900 shadow-2xs' : ''" class="px-3 py-1.5 rounded-md transition-all whitespace-nowrap">Playbooks</a>
+
+        <div class="flex items-center gap-3 self-start sm:self-auto">
+            <div class="flex items-center space-x-1 bg-slate-200/70 p-0.5 rounded-lg text-xs font-bold text-slate-600 overflow-x-auto">
+                <a href="?type=" :class="currentType === 'all' ? 'bg-white text-slate-900 shadow-sm' : ''" class="px-3 py-1.5 rounded-md transition-all whitespace-nowrap">All</a>
+                <a href="?type=support" :class="currentType === 'support' ? 'bg-white text-slate-900 shadow-sm' : ''" class="px-3 py-1.5 rounded-md transition-all whitespace-nowrap">Support Fixes</a>
+                <a href="?type=runbook" :class="currentType === 'runbook' ? 'bg-white text-slate-900 shadow-sm' : ''" class="px-3 py-1.5 rounded-md transition-all whitespace-nowrap">Runbooks</a>
+                <a href="?type=software" :class="currentType === 'software' ? 'bg-white text-slate-900 shadow-sm' : ''" class="px-3 py-1.5 rounded-md transition-all whitespace-nowrap">Scripts</a>
+                <a href="?type=general" :class="currentType === 'general' ? 'bg-white text-slate-900 shadow-sm' : ''" class="px-3 py-1.5 rounded-md transition-all whitespace-nowrap">General</a>
+            </div>
+            {% if request.user.can_edit_content %}
+            <a href="{% url 'article_create' %}" class="px-3.5 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm whitespace-nowrap">+ New Article</a>
+            {% endif %}
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8 items-start">
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6 lg:space-y-6 lg:gap-0 lg:sticky lg:top-6">
-            
-            <form method="GET" action="{% url 'article_list' %}" class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs space-y-4 h-full">
-                <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">Refine Filter Parameters</h3>
-                
+
+        <!-- Left Filter Panel -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6 lg:sticky lg:top-6">
+
+            <form method="GET" action="{% url 'article_list' %}" class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-4">
+                <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">Refine Filters</h3>
+
                 {% if article_type %}<input type="hidden" name="type" value="{{ article_type }}">{% endif %}
-                
+
                 <div class="space-y-1">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Taxonomy Category</label>
-                    <div class="w-full text-xs font-sans rounded-lg [&_select]:w-full [&_select]:px-3 [&_select]:py-2 [&_select]:border [&_select]:border-slate-200 [&_select]:rounded-lg [&_select]:bg-white">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Category</label>
+                    <div class="w-full text-xs [&_select]:w-full [&_select]:px-3 [&_select]:py-2 [&_select]:border [&_select]:border-slate-200 [&_select]:rounded-lg [&_select]:bg-white">
                         {{ form.category }}
                     </div>
                 </div>
-                
+
                 <div class="space-y-1">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Incident Severity</label>
-                    <div class="w-full text-xs font-sans rounded-lg [&_select]:w-full [&_select]:px-3 [&_select]:py-2 [&_select]:border [&_select]:border-slate-200 [&_select]:rounded-lg [&_select]:bg-white">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Severity</label>
+                    <div class="w-full text-xs [&_select]:w-full [&_select]:px-3 [&_select]:py-2 [&_select]:border [&_select]:border-slate-200 [&_select]:rounded-lg [&_select]:bg-white">
                         {{ form.severity }}
                     </div>
                 </div>
 
                 <div class="space-y-1">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Sort Telemetry</label>
-                    <div class="w-full text-xs font-sans rounded-lg [&_select]:w-full [&_select]:px-3 [&_select]:py-2 [&_select]:border [&_select]:border-slate-200 [&_select]:rounded-lg [&_select]:bg-white">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Sort By</label>
+                    <div class="w-full text-xs [&_select]:w-full [&_select]:px-3 [&_select]:py-2 [&_select]:border [&_select]:border-slate-200 [&_select]:rounded-lg [&_select]:bg-white">
                         {{ form.sort }}
                     </div>
                 </div>
 
-                <button type="submit" class="w-full py-2.5 bg-slate-800 text-white font-bold rounded-lg text-xs hover:bg-slate-900 transition-all shadow-sm pt-2">
-                    Apply Parameters
+                <button type="submit" class="w-full py-2.5 bg-slate-800 text-white font-bold rounded-lg text-xs hover:bg-slate-900 transition-all shadow-sm">
+                    Apply Filters
                 </button>
             </form>
 
-            <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-2xs space-y-3 h-full">
-                <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">Popular Labels</h3>
+            <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-3">
+                <h3 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400">Popular Tags</h3>
                 <div class="flex flex-wrap gap-1.5">
                     {% for tag in popular_tags %}
-                    <a href="{% url 'tag_articles' tag.slug %}" class="text-3xs font-bold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md hover:bg-blue-50 hover:text-blue-700 border border-slate-200/40 transition-colors">
+                    <a href="{% url 'tag_articles' tag.slug %}" class="text-3xs font-bold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md hover:bg-blue-50 hover:text-blue-700 border border-slate-200 transition-colors">
                         #{{ tag.name }}
                     </a>
                     {% empty %}
-                    <p class="text-3xs text-slate-400 italic">No indexing labels logged.</p>
+                    <p class="text-3xs text-slate-400">No tags yet.</p>
                     {% endfor %}
                 </div>
             </div>
         </div>
 
+        <!-- Article Results -->
         <div class="lg:col-span-3 space-y-3">
             {% for article in page_obj %}
-            <div class="bg-white border border-slate-200/60 p-5 rounded-xl shadow-3xs flex flex-col sm:flex-row sm:items-center sm:justify-between hover:shadow-2xs border-l-4 group transition-all gap-4"
-                 style="border-l-color: {{ article.category.color_hex|default:'#2563EB' }}">
-                <div class="space-y-1 w-full sm:max-w-xl">
+            <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between hover:border-blue-300 border-l-4 group transition-all gap-4"
+                 style="border-left-color: {{ article.category.color_hex|default:'#2563EB' }};">
+                <div class="space-y-1.5 w-full sm:max-w-xl">
                     <div class="flex flex-wrap items-center gap-1.5">
-                        <span class="text-4xs font-extrabold uppercase tracking-widest text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded">
+                        {% if article.is_pinned %}
+                        <span class="text-3xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded">Pinned</span>
+                        {% endif %}
+                        <span class="text-3xs font-extrabold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
                             {{ article.category.name }}
                         </span>
-                        <span class="text-4xs font-bold px-2 py-0.5 rounded uppercase tracking-wider {% if article.article_type == 'support' %}bg-amber-50 text-amber-700{% elif article.article_type == 'project' %}bg-blue-50 text-blue-700{% else %}bg-purple-50 text-purple-700{% endif %}">
+                        <span class="text-3xs font-bold px-2 py-0.5 rounded uppercase tracking-wider {% if article.article_type == 'support' %}bg-amber-50 text-amber-700{% elif article.article_type == 'runbook' %}bg-emerald-50 text-emerald-700{% else %}bg-indigo-50 text-indigo-700{% endif %}">
                             {{ article.get_article_type_display }}
                         </span>
+                        {% if article.related_project %}
+                        <span class="text-3xs font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded">{{ article.related_project.project_code }}</span>
+                        {% endif %}
                         {% if article.error_codes %}
-                        <span class="text-4xs font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200/40">{{ article.error_codes }}</span>
+                        <span class="text-3xs font-mono bg-red-50 text-red-700 px-2 py-0.5 rounded border border-red-100">{{ article.error_codes }}</span>
                         {% endif %}
                     </div>
-                    <a href="{{ article.get_absolute_url }}" class="block text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors pt-0.5">
+                    <a href="{{ article.get_absolute_url }}" class="block text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
                         {{ article.title }}
                     </a>
-                    <p class="text-xs text-slate-400 font-normal line-clamp-2 leading-relaxed">{{ article.summary|default:"No structural details provided." }}</p>
+                    <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed">{{ article.summary|default:"No summary provided." }}</p>
                 </div>
 
-                <div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center shrink-0 text-3xs text-slate-400 font-medium border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 gap-1">
+                <div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center shrink-0 text-3xs text-slate-400 font-medium border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 gap-1.5">
                     <div class="text-left sm:text-right">
-                        <p class="text-slate-700 font-bold leading-none sm:leading-normal">{{ article.author.full_name }}</p>
-                        <p class="mt-0.5 text-4xs sm:text-3xs">{{ article.updated_at|date:"M d, Y" }}</p>
+                        <p class="text-slate-700 font-bold">{{ article.author.full_name }}</p>
+                        <p>v{{ article.version }} &bull; {{ article.updated_at|date:"M d, Y" }}</p>
                     </div>
-                    <div class="bg-slate-50 border border-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-bold text-center shrink-0">
+                    <div class="bg-slate-50 border border-slate-200 text-slate-700 px-2.5 py-1 rounded-md font-bold text-center shrink-0">
                         {{ article.views_count }} views
                     </div>
                 </div>
             </div>
             {% empty %}
             <div class="text-center py-16 border border-dashed border-slate-200 rounded-xl bg-white space-y-2">
-                <p class="text-sm font-bold text-slate-700">No Articles Match Active Filter</p>
-                <p class="text-xs text-slate-400 max-w-xs mx-auto">Try clearing adjustments or run a wide-scope search lookup sequence above.</p>
+                <p class="text-sm font-bold text-slate-700">No Articles Match Active Filters</p>
+                <p class="text-xs text-slate-400 max-w-xs mx-auto">Try clearing your filters or using the global search bar above.</p>
             </div>
             {% endfor %}
 
             {% if page_obj.has_other_pages %}
-            <div class="flex items-center justify-between border-t border-slate-200/80 pt-6 mt-6 text-xs font-bold text-slate-600">
+            <div class="flex items-center justify-between border-t border-slate-200 pt-6 mt-6 text-xs font-bold text-slate-600">
                 <div>
                     {% if page_obj.has_previous %}
-                    <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" class="px-3 py-1.5 bg-white border rounded-lg hover:bg-slate-50 transition-colors">Back</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">Previous</a>
                     {% endif %}
                 </div>
-                <span class="font-normal text-slate-400">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                <span class="font-normal text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
                 <div>
                     {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" class="px-3 py-1.5 bg-white border rounded-lg hover:bg-slate-50 transition-colors">Next</a>
+                    <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">Next</a>
                     {% endif %}
                 </div>
             </div>

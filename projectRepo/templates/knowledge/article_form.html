@@ -1,22 +1,19 @@
 {% extends 'base.html' %}
-{% load form_helpers %}
 
-{% block title %}{% if is_create %}Build Documentation Asset{% else %}Revise {{ article.title }}{% endif %}{% endblock %}
+{% block title %}{% if is_create %}Create Support Resolution / Guide{% else %}Edit {{ article.title }}{% endif %}{% endblock %}
 
-{% block content %}
-
+{% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js" referrerpolicy="origin"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         tinymce.init({
             selector: '#article-content-editor',
-            height: 450,
+            height: 400,
             menubar: false,
-            plugins: 'lists link code table codesample emoticons wordcount',
-            toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | table codesample | removeformat',
-            content_style: "@import url('https://fonts.cdnfonts.com/css/century-gothic'); body { font-family: 'Century Gothic', sans-serif; font-size: 14px; color: #334155; }",
+            plugins: 'lists link code table codesample wordcount',
+            toolbar: 'undo redo | blocks | bold italic underline | forecolor | alignleft aligncenter alignright | bullist numlist | table codesample link | removeformat',
+            content_style: "@import url('https://fonts.cdnfonts.com/css/century-gothic'); body { font-family: 'Century Gothic', sans-serif; font-size: 14px; color: #1e293b; background-color: #ffffff; }",
             setup: function (editor) {
-                // Synchronize the underlying textarea with editor inputs on-the-fly for Django form clean validations
                 editor.on('change', function () {
                     editor.save();
                 });
@@ -24,233 +21,231 @@
         });
     });
 </script>
+{% endblock %}
 
-{{ categories_json|json_script:"categories-data" }}
-
-<div class="max-w-4xl mx-auto" 
-     x-data="{ 
-        docType: '{{ form.article_type.value|default:'support' }}',
-        selectedCategory: '{{ form.category.value|default:'' }}',
-        
-        // SAFE PARSE ENGINE: Reads structural database objects directly out of the text content node block safely
-        categories: JSON.parse(document.getElementById('categories-data').textContent),
-        
-        get filteredCategories() {
-            return this.categories.filter(c => c.category_type === this.docType || c.category_type === 'general');
-        }
+{% block content %}
+<div class="max-w-4xl mx-auto"
+     x-data="{
+        docType: '{{ form.article_type.value|default:'support' }}'
      }">
-    
+
     <div class="border-b border-slate-200 pb-4 mb-6">
-        <h1 class="text-xl font-black text-slate-900 uppercase tracking-tight">
-            {% if is_create %}Commit New Knowledge Asset Node{% else %}Modify Target Operational Playbook{% endif %}
+        <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">
+            {% if is_create %}Create Support Resolution or Knowledge Guide{% else %}Update "{{ article.title }}" (v{{ article.version }}){% endif %}
         </h1>
-        <p class="text-xs text-slate-400">Map precise engineering diagnostic paths across internal organizational frameworks.</p>
+        <p class="text-xs text-slate-500 mt-0.5">Document troubleshooting steps, attach screenshots or logs, and collaborate with engineering teams.</p>
     </div>
 
-    <form method="POST" enctype="multipart/form-data" class="space-y-6" @submit="tinymce.triggerSave()" novalidate>
+    <form method="POST" enctype="multipart/form-data" class="space-y-6" @submit="if (window.tinymce) tinymce.triggerSave()" novalidate>
         {% csrf_token %}
 
         {% if form.errors or step_formset.errors %}
-        <div class="bg-red-50 border border-red-200 rounded-xl p-5 shadow-2xs space-y-2">
-            <div class="flex items-center space-x-2 text-red-800 border-b border-red-100 pb-2 mb-2">
-                <svg class="h-4 w-4 shrink-0 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <h3 class="text-xs font-black uppercase tracking-wider">Validation Boundaries Violated</h3>
-            </div>
-            <ul class="list-disc list-inside text-xs text-red-700 space-y-1 font-sans">
+        <div class="bg-red-50 border border-red-200 rounded-xl p-5 shadow-sm space-y-2">
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-red-800">Please resolve the validation errors below</h3>
+            <ul class="list-disc list-inside text-xs text-red-700 space-y-1">
                 {% for field, errors in form.errors.items %}
-                    <li><strong class="capitalize">{{ field|replace_underscore }}</strong>: {{ errors.0 }}</li>
+                    <li><strong>{{ field }}</strong>: {{ errors.0 }}</li>
                 {% endfor %}
-                
                 {% for error in form.non_field_errors %}
                     <li>{{ error }}</li>
                 {% endfor %}
             </ul>
         </div>
         {% endif %}
-        
-        <div class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs space-y-4">
-            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b pb-2">Core Parameter Profiles</h2>
-            
+
+        <!-- Core Metadata -->
+        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Core Information</h2>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="space-y-1 md:col-span-2">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Document Headline / Title</label>
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Title</label>
                     {{ form.title }}
-                    {% if form.title.errors %}<p class="text-3xs font-bold text-red-600">{{ form.title.errors.0 }}</p>{% endif %}
                 </div>
                 <div class="space-y-1">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Documentation Type Classification</label>
-                    <select name="article_type" id="id_article_type" x-model="docType" class="w-full px-4 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 text-sm font-sans">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Article Type</label>
+                    <select name="article_type" id="id_article_type" x-model="docType"
+                            class="w-full px-4 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm">
                         {% for val, label in form.fields.article_type.choices %}
-                        <option value="{{ val }}">{{ label }}</option>
+                        <option value="{{ val }}" {% if form.article_type.value == val %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="space-y-1">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Taxonomy Category Group Node</label>
-                    <select name="category" x-model="selectedCategory" class="w-full px-4 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 text-sm font-sans">
-                        <option value="">-- Choose Target Classification Node --</option>
-                        <template x-for="cat in filteredCategories" :key="cat.id">
-                            <option :value="cat.id" :selected="cat.id == selectedCategory" x-text="cat.name"></option>
-                        </template>
-                    </select>
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Category</label>
+                    {{ form.category }}
                 </div>
-                <div class="space-y-1 md:col-span-2">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Tag Labels Matrix</label>
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Linked Project (Optional)</label>
+                    {{ form.related_project }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Tags (Comma-separated)</label>
                     {{ form.tag_names }}
-                    <p class="text-4xs text-slate-400 font-medium mt-1">Split entries with commas, e.g. Exchange, Hybrid Connect, MFA</p>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Search Keywords</label>
+                    {{ form.search_keywords }}
                 </div>
             </div>
 
             <div class="space-y-1">
-                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Brief Listing Summary</label>
+                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Summary</label>
                 {{ form.summary }}
             </div>
 
+            {% if not is_create %}
+            <div class="space-y-1 bg-blue-50/50 border border-blue-100 p-3 rounded-lg">
+                <label class="text-3xs font-extrabold uppercase tracking-wider text-blue-700">Revision Change Summary</label>
+                {{ form.change_summary }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Support Resolution Structured Fields -->
+        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4"
+             x-show="docType === 'support'" x-transition>
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-amber-600 border-b border-slate-100 pb-2">
+                Support Incident &amp; Root Cause Telemetry
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Severity</label>{{ form.severity }}</div>
+                <div class="space-y-1 md:col-span-2"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Affected Systems</label>{{ form.affected_systems }}</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Error Codes</label>{{ form.error_codes }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Microsoft Products</label>{{ form.microsoft_products }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Time to Resolve (Min)</label>{{ form.time_to_resolve_minutes }}</div>
+            </div>
+
+            <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Resolution Type</label>{{ form.resolution_type }}</div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Observed Symptoms</label>{{ form.symptoms }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Confirmed Root Cause</label>{{ form.root_cause }}</div>
+            </div>
+        </div>
+
+        <!-- Runbook / Software Guide Metadata -->
+        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4"
+             x-show="docType === 'runbook' || docType === 'software'" x-transition style="display: none;">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-indigo-600 border-b border-slate-100 pb-2">
+                Runbook &amp; Script Specifications
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Tech Stack</label>{{ form.tech_stack }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Difficulty Level</label>{{ form.difficulty_level }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Est. Duration</label>{{ form.estimated_duration }}</div>
+            </div>
+            <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Prerequisites</label>{{ form.prerequisites }}</div>
+        </div>
+
+        <!-- Main Body & Verification -->
+        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Resolution Procedure &amp; Verification</h2>
             <div class="space-y-1">
-                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Detailed Analysis Body Content Narrative (Rich Text Editor)</label>
+                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Detailed Body Content</label>
                 {{ form.content }}
             </div>
-
             <div class="space-y-1">
-                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Boost Search Keyword Modifiers</label>
-                {{ form.search_keywords }}
+                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Verification Steps</label>
+                {{ form.verification_steps }}
             </div>
         </div>
 
-        <div class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs space-y-4 transition-all duration-300"
-             x-show="docType === 'support'" 
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 transform -translate-y-2"
-             x-transition:enter-end="opacity-100 transform translate-y-0"
-             style="display: none;">
-            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-amber-600 border-b pb-2 flex items-center">
-                <span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>
-                Support Incident Telemetry Fields
-            </h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="space-y-1">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Incident Priority Severity</label>
-                    {{ form.severity }}
-                </div>
-                <div class="space-y-1 md:col-span-2">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Target Affected Infrastructure Platforms</label>
-                    {{ form.affected_systems }}
-                </div>
+        <!-- Step-by-Step Troubleshooting / Action Checklist Builder -->
+        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h2 class="text-2xs font-extrabold uppercase tracking-widest text-blue-600">Ordered Action / Resolution Steps</h2>
+                <button type="button" id="add-step-btn" class="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-2xs font-bold hover:bg-blue-100 transition-colors">
+                    + Add Another Step
+                </button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="space-y-1">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Diagnostic Fault Error Codes</label>
-                    {{ form.error_codes }}
-                </div>
-                <div class="space-y-1">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Microsoft System Products Line</label>
-                    {{ form.microsoft_products }}
-                </div>
-                <div class="space-y-1">
-                    <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Mean Time To Close Resolution (Minutes)</label>
-                    {{ form.time_to_resolve_minutes }}
-                </div>
-            </div>
-            <div class="space-y-1">
-                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Resolution Classification Category Type</label>
-                {{ form.resolution_type }}
-            </div>
-        </div>
+            {{ step_formset.management_form }}
 
-        <div class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs space-y-4 transition-all duration-300"
-             x-show="docType === 'project'" 
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 transform -translate-y-2"
-             x-transition:enter-end="opacity-100 transform translate-y-0"
-             style="display: none;">
-            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-blue-600 border-b pb-2 flex items-center">
-                <span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
-                Project Deployment Environment Design Parameters
-            </h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Project Type Scope</label>{{ form.project_type }}</div>
-                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Engineering Technology Stack</label>{{ form.tech_stack }}</div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Complexity Matrix Level</label>{{ form.difficulty_level }}</div>
-                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Estimated Project Execution Duration</label>{{ form.estimated_duration }}</div>
-            </div>
-            <div class="space-y-1">
-                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Administrative Pre-Requisites Specifications</label>
-                {{ form.prerequisites }}
-            </div>
-
-            <div class="pt-4 space-y-4 border-t border-slate-100">
-                <h3 class="text-3xs uppercase tracking-widest font-extrabold text-slate-400">Sequential Execution Phases Builder</h3>
-                {{ step_formset.management_form }}
-                
-                <div class="space-y-4">
-                    {% for s_form in step_formset %}
-                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 relative">
-                        {{ s_form.id }}{{ s_form.step_number }}
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="space-y-1 md:col-span-2"><label class="text-3xs font-bold text-slate-500">Phase Title</label>{{ s_form.title }}</div>
-                            <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Est. Minutes</label>{{ s_form.estimated_minutes }}</div>
-                        </div>
-                        <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Task Execution Instruction Content</label>{{ s_form.description }}</div>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div class="space-y-1 md:col-span-3"><label class="text-3xs font-bold text-slate-500">PowerShell / CLI Commands Block</label>{{ s_form.code_snippet }}</div>
-                            <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Syntax Format</label>{{ s_form.code_language }}</div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="space-y-1"><label class="text-3xs font-bold text-red-600">Production Warning Flags</label>{{ s_form.warning }}</div>
-                            <div class="space-y-1"><label class="text-3xs font-bold text-blue-600">Pro Shortcut Tips</label>{{ s_form.tip }}</div>
-                        </div>
-                        <div class="flex items-center space-x-2 text-3xs font-bold text-slate-500 pt-1">
-                            {{ s_form.is_optional }} <label for="{{ s_form.is_optional.id_for_label }}">Mark as optional phase node component</label>
-                            {% if step_formset.can_delete %}<div class="ml-auto flex items-center space-x-1 text-red-600">{{ s_form.DELETE }} <span>Purge Step</span></div>{% endif %}
-                        </div>
+            <div id="steps-container" class="space-y-4">
+                {% for s_form in step_formset %}
+                <div class="step-item p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                    {{ s_form.id }}{{ s_form.step_number }}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="space-y-1 md:col-span-2"><label class="text-3xs font-bold text-slate-500">Step Title</label>{{ s_form.title }}</div>
+                        <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Est. Minutes</label>{{ s_form.estimated_minutes }}</div>
                     </div>
-                    {% endfor %}
+                    <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Instructions</label>{{ s_form.description }}</div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="space-y-1 md:col-span-3"><label class="text-3xs font-bold text-slate-500">PowerShell / CLI Snippet</label>{{ s_form.code_snippet }}</div>
+                        <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Language</label>{{ s_form.code_language }}</div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1"><label class="text-3xs font-bold text-red-600">Warning</label>{{ s_form.warning }}</div>
+                        <div class="space-y-1"><label class="text-3xs font-bold text-blue-600">Tip</label>{{ s_form.tip }}</div>
+                    </div>
+                    <div class="flex items-center space-x-2 text-3xs font-bold text-slate-500 pt-1">
+                        {{ s_form.is_optional }} <label>Optional step</label>
+                        {% if step_formset.can_delete %}<div class="ml-auto flex items-center space-x-1 text-red-600">{{ s_form.DELETE }} <span>Remove Step</span></div>{% endif %}
+                    </div>
                 </div>
+                {% endfor %}
             </div>
+
+            <!-- Empty Form Template for Dynamic "+ Add Step" -->
+            <template id="empty-step-template">
+                <div class="step-item p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                    {{ step_formset.empty_form.id }}{{ step_formset.empty_form.step_number }}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="space-y-1 md:col-span-2"><label class="text-3xs font-bold text-slate-500">Step Title</label>{{ step_formset.empty_form.title }}</div>
+                        <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Est. Minutes</label>{{ step_formset.empty_form.estimated_minutes }}</div>
+                    </div>
+                    <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Instructions</label>{{ step_formset.empty_form.description }}</div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="space-y-1 md:col-span-3"><label class="text-3xs font-bold text-slate-500">PowerShell / CLI Snippet</label>{{ step_formset.empty_form.code_snippet }}</div>
+                        <div class="space-y-1"><label class="text-3xs font-bold text-slate-500">Language</label>{{ step_formset.empty_form.code_language }}</div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1"><label class="text-3xs font-bold text-red-600">Warning</label>{{ step_formset.empty_form.warning }}</div>
+                        <div class="space-y-1"><label class="text-3xs font-bold text-blue-600">Tip</label>{{ step_formset.empty_form.tip }}</div>
+                    </div>
+                    <div class="flex items-center space-x-2 text-3xs font-bold text-slate-500 pt-1">
+                        {{ step_formset.empty_form.is_optional }} <label>Optional step</label>
+                    </div>
+                </div>
+            </template>
         </div>
 
-        <!-- TECHNICAL REFERENCE ASSETS & ATTACHMENT MANAGEMENT BLOCK -->
-        <div class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs space-y-4">
-            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b pb-2 flex items-center">
-                <svg class="h-3.5 w-3.5 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 0A3 3 0 1011.243 13.414l3.536-3.536m0 0l3.536 3.536M9.172 14.828a4 4 0 115.656-5.656l-3.536 3.536" />
-                </svg>
-                Technical Reference Assets
+        <!-- Screenshots, Logs, Scripts & Attachments -->
+        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">
+                Screenshots, Scripts &amp; Reference Materials
             </h2>
-            
-            <!-- EXISTING ATTACHMENTS LIST WITH ASYNCHRONOUS DELETION -->
+
             {% if article and article.attachments.exists %}
             <div class="space-y-2 mb-4">
-                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Currently Hosted Vault Assets</label>
+                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Existing Attachments</label>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {% for att in article.attachments.all %}
-                    <div x-data="{ deleted: false }" x-show="!deleted" class="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 text-xs">
+                    <div x-data="{ deleted: false }" x-show="!deleted" class="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
                         <div class="overflow-hidden pr-2">
-                            <p class="font-bold text-slate-700 truncate font-sans">{{ att.file_name }}</p>
-                            <p class="text-4xs text-slate-400 font-mono">{{ att.file_size|filesizeformat }}</p>
+                            <a href="{% url 'download_attachment' att.pk %}" target="_blank" class="font-bold text-blue-700 hover:underline truncate block">{{ att.original_name }}</a>
+                            <p class="text-3xs text-slate-400 font-mono">{{ att.get_attachment_kind_display }} &bull; {{ att.file_size_human }}</p>
                         </div>
-                        <button type="button" 
-                                @click="if (confirm('Permanently purge this attachment from the vault?')) {
+                        <button type="button"
+                                @click="if (confirm('Delete this attachment permanently?')) {
                                     fetch('{% url 'delete_attachment' att.pk %}', {
                                         method: 'POST',
                                         headers: { 'X-CSRFToken': '{{ csrf_token }}', 'X-Requested-With': 'XMLHttpRequest' }
                                     }).then(res => res.json()).then(data => { if(data.success) deleted = true; });
-                                }" 
-                                class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors shrink-0"
-                                title="Delete Attachment">
-                            <svg class="w-4 h-4 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
+                                }"
+                                class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors shrink-0">
+                            <svg class="w-4 h-4 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                     </div>
                     {% endfor %}
@@ -258,41 +253,83 @@
             </div>
             {% endif %}
 
-            <!-- FILE DROPZONE INPUT -->
             <div class="space-y-1">
-                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Append New Attachments (Logs, Configuration Scripts, Diagrams)</label>
-                <input type="file" name="attachments" multiple 
-                       class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-dashed border-slate-200 p-4 rounded-xl cursor-pointer font-sans bg-slate-50/30">
-                <p class="text-4xs text-slate-400 font-medium pt-1">Ctrl+Click or drag multiple files to append them directly to this engineering playbook resource node.</p>
+                <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Attach Screenshots, Logs, Scripts, or Supporting Files</label>
+                <input type="file" name="attachments" multiple
+                       class="w-full text-xs text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-dashed border-slate-300 p-4 rounded-xl cursor-pointer bg-slate-50">
             </div>
         </div>
 
-        <div class="bg-white border border-slate-200/60 p-6 rounded-xl shadow-2xs space-y-4">
-            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b pb-2">Governance Visibility & Review Controls</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
-                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Workflow Publish Status</label>{{ form.status }}</div>
-                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Security Clearance Scope Boundary</label>{{ form.visibility }}</div>
+        <!-- Governance & Scoped Access -->
+        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Permissions, Visibility &amp; Collaboration</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Workflow Status</label>{{ form.status }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Visibility Scope</label>{{ form.visibility }}</div>
             </div>
-            
-            <div class="flex flex-wrap gap-4 pt-2 text-3xs font-bold text-slate-600 uppercase tracking-wider">
-                <div class="flex items-center space-x-1.5">{{ form.is_featured }} <label>Curation Highlight Feature</label></div>
-                <div class="flex items-center space-x-1.5">{{ form.is_pinned }} <label>Pin to Top Dashboards</label></div>
-                <div class="flex items-center space-x-1.5">{{ form.needs_review }} <label>Flag for Senior Governance Review</label></div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Allowed Teams (if Team-scoped)</label>{{ form.allowed_teams }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Allowed Users (if Restricted)</label>{{ form.allowed_users }}</div>
+            </div>
+
+            <div class="flex flex-wrap gap-5 pt-2 text-2xs font-bold text-slate-600">
+                <label class="inline-flex items-center space-x-2 cursor-pointer">{{ form.allow_engineer_collaboration }} <span>Allow Engineer Collaboration</span></label>
+                <label class="inline-flex items-center space-x-2 cursor-pointer">{{ form.is_featured }} <span>Featured</span></label>
+                <label class="inline-flex items-center space-x-2 cursor-pointer">{{ form.is_pinned }} <span>Pin to Top</span></label>
+                <label class="inline-flex items-center space-x-2 cursor-pointer">{{ form.needs_review }} <span>Needs Review</span></label>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Collaborating Contributors</label>{{ form.contributors }}</div>
-                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Cross-Referenced Related Articles</label>{{ form.related_articles }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Contributors</label>{{ form.contributors }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Related Articles</label>{{ form.related_articles }}</div>
             </div>
         </div>
 
         <div class="flex items-center justify-end space-x-3 border-t border-slate-200 pt-4">
-            <a href="{% url 'dashboard' %}" class="px-4 py-2.5 border rounded-lg font-bold text-slate-700 hover:bg-slate-50 transition-colors text-xs">Cancel Changes</a>
-            <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg text-xs hover:bg-blue-700 shadow-sm shadow-blue-100 transition-all active:scale-[0.99]">
-                Commit Asset Entry to Vault
+            <a href="{% if article %}{{ article.get_absolute_url }}{% else %}{% url 'article_list' %}{% endif %}" class="px-4 py-2.5 bg-white border border-slate-200 rounded-lg font-bold text-slate-700 hover:bg-slate-50 text-xs">Cancel</a>
+            <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg text-xs hover:bg-blue-700 shadow-sm transition-all">
+                {% if is_create %}Save Article{% else %}Save Changes{% endif %}
             </button>
         </div>
 
     </form>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const addBtn = document.getElementById("add-step-btn");
+    const container = document.getElementById("steps-container");
+    const template = document.getElementById("empty-step-template");
+    const totalForms = document.getElementById("id_steps-TOTAL_FORMS");
+
+    function renumberSteps() {
+        const items = container.querySelectorAll(".step-item");
+        items.forEach((item, idx) => {
+            const numInput = item.querySelector("input[name$='-step_number']");
+            if (numInput && !numInput.value) {
+                numInput.value = idx + 1;
+            }
+        });
+    }
+    renumberSteps();
+
+    if (addBtn && container && template && totalForms) {
+        addBtn.addEventListener("click", function () {
+            const formIdx = parseInt(totalForms.value, 10);
+            const html = template.innerHTML.replace(/__prefix__/g, formIdx);
+            const wrapper = document.createElement("div");
+            wrapper.innerHTML = html.trim();
+            const newStep = wrapper.firstElementChild;
+            const numInput = newStep.querySelector("input[name$='-step_number']");
+            if (numInput) numInput.value = container.querySelectorAll(".step-item").length + 1;
+            container.appendChild(newStep);
+            totalForms.value = formIdx + 1;
+        });
+    }
+});
+</script>
 {% endblock %}

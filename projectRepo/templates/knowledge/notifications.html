@@ -1,47 +1,65 @@
 {% extends 'base.html' %}
 
-{% block title %}My Notifications{% endblock %}
+{% block title %}Notifications{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto space-y-4">
-    
+
     <div class="border-b border-slate-200 pb-3 flex items-center justify-between">
         <div>
-            <h1 class="text-xl font-black text-slate-900 uppercase tracking-tight">System Communications</h1>
-            <p class="text-xs text-slate-400">Reviewing automated change indicator streams and administrative review flags</p>
+            <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Notifications</h1>
+            <p class="text-xs text-slate-500">Project deliverable uploads, document approvals, task assignments, and article updates</p>
         </div>
     </div>
 
-    <div class="bg-white border border-slate-200/60 rounded-xl shadow-2xs divide-y divide-slate-100 overflow-hidden">
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm divide-y divide-slate-100 overflow-hidden">
         {% for notif in notifications %}
-        <div class="p-4 flex items-start space-x-4 hover:bg-slate-50/60 transition-colors {% if not notif.is_read %}bg-blue-50/20{% endif %}">
-            
-            <div class="mt-0.5 shrink-0 h-8 w-8 rounded-lg flex items-center justify-center {% if notif.notification_type == 'comment' %}bg-purple-50 text-purple-600{% elif notif.notification_type == 'review_request' %}bg-amber-50 text-amber-600{% else %}bg-blue-50 text-blue-600{% endif %} border border-transparent">
+        <div class="p-4 flex items-start space-x-4 hover:bg-slate-50 transition-colors {% if not notif.is_read %}bg-blue-50/30{% endif %}">
+
+            <div class="mt-0.5 shrink-0 h-8 w-8 rounded-lg flex items-center justify-center
+                {% if notif.notification_type == 'document_approved' %}bg-emerald-50 text-emerald-600
+                {% elif notif.notification_type == 'document_rejected' %}bg-red-50 text-red-600
+                {% elif notif.notification_type == 'review_request' %}bg-amber-50 text-amber-600
+                {% elif notif.notification_type == 'comment' %}bg-indigo-50 text-indigo-600
+                {% else %}bg-blue-50 text-blue-600{% endif %}">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.03 6.03 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
             </div>
 
-            <div class="flex-1 min-w-0 space-y-0.5 text-xs">
+            <div class="flex-1 min-w-0 space-y-1 text-xs">
                 <div class="flex items-center justify-between text-3xs font-bold">
-                    <span class="text-slate-800 uppercase tracking-wide font-black">{{ notif.get_notification_type_display }}</span>
-                    <span class="text-slate-400 font-normal">{{ notif.created_at|date:"M d, g:i a" }}</span>
+                    <span class="text-slate-700 uppercase tracking-wide">{{ notif.get_notification_type_display }}</span>
+                    <span class="text-slate-400 font-normal">{{ notif.created_at|date:"M d, Y g:i a" }}</span>
                 </div>
-                <h4 class="font-bold text-slate-800 pt-0.5">{{ notif.title }}</h4>
-                <p class="text-slate-500 font-normal leading-relaxed text-slate-600">{{ notif.message }}</p>
-                
-                {% if notif.article %}
-                <div class="pt-1.5">
-                    <a href="{{ notif.article.get_absolute_url }}" class="inline-flex items-center text-3xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50/60 px-2 py-0.5 rounded border border-blue-100 transition-colors">
-                        Inspect Target Document Link ›
+                <h4 class="font-bold text-slate-900">{{ notif.title }}</h4>
+                <p class="text-slate-600 leading-relaxed">{{ notif.message }}</p>
+
+                <div class="pt-1 flex items-center space-x-2">
+                    {% if notif.project %}
+                    <a href="{{ notif.project.get_absolute_url }}" class="inline-flex items-center text-3xs font-bold text-indigo-700 hover:bg-indigo-100 bg-indigo-50 px-2.5 py-0.5 rounded border border-indigo-200 transition-colors">
+                        Open Project {{ notif.project.project_code }} &rsaquo;
                     </a>
+                    {% endif %}
+                    {% if notif.article %}
+                    <a href="{{ notif.article.get_absolute_url }}" class="inline-flex items-center text-3xs font-bold text-blue-700 hover:bg-blue-100 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200 transition-colors">
+                        Open Article &rsaquo;
+                    </a>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
         </div>
         {% empty %}
-        <div class="text-center py-16 text-slate-400 text-xs font-medium italic">
-            Communications clear. No system telemetry tracking alerts currently generated.
+        <div class="text-center py-16 text-slate-400 text-xs">
+            No notifications right now.
         </div>
         {% endfor %}
     </div>
+
+    {% if notifications.has_other_pages %}
+    <div class="flex items-center justify-between pt-2 text-xs font-bold text-slate-600">
+        <div>{% if notifications.has_previous %}<a href="?page={{ notifications.previous_page_number }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg">Previous</a>{% endif %}</div>
+        <span class="font-normal text-slate-500">Page {{ notifications.number }} of {{ notifications.paginator.num_pages }}</span>
+        <div>{% if notifications.has_next %}<a href="?page={{ notifications.next_page_number }}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg">Next</a>{% endif %}</div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
