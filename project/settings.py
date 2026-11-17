@@ -9,8 +9,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # CORE
 # ─────────────────────────────────────────────────────────────────────────────
 SECRET_KEY = config("SECRET_KEY")
-DEBUG = config("DEBUG")
-ALLOWED_HOSTS = ['*']
+DEBUG = config("DEBUG", default=False, cast=bool)
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="*" if DEBUG else "localhost,127.0.0.1",
+    cast=lambda v: [s.strip() for s in v.split(",") if s.strip()],
+)
 
 DJANGO_APPS = [
     "django.contrib.admin",
@@ -114,11 +118,14 @@ LOGIN_URL = "/auth/login/"
 LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/auth/login/"
 
-SESSION_COOKIE_AGE = 28800          # 8 hours
+SESSION_COOKIE_AGE = 28800  # 8 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=False, cast=bool)
 SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=False, cast=bool)
 CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = "Lax"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -139,12 +146,14 @@ CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
-        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "IGNORE_EXCEPTIONS": True,
+        },
         "KEY_PREFIX": "mspkb",
         "TIMEOUT": 300,
     }
 }
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MICROSOFT ENTRA ID  (Azure AD)
@@ -155,6 +164,7 @@ MICROSOFT_AUTH = {
     "CLIENT_ID": config("AZURE_CLIENT_ID"),
     "CLIENT_SECRET": config("AZURE_CLIENT_SECRET"),
     "TENANT_ID": _TENANT,
+    "ALLOWED_TENANT_IDS": [_TENANT],
     "REDIRECT_URI": config(
         "AZURE_REDIRECT_URI", default="http://localhost:8000/auth/callback/"
     ),
@@ -188,9 +198,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ─────────────────────────────────────────────────────────────────────────────
 ARTICLES_PER_PAGE = 20
 SEARCH_SUGGESTIONS_LIMIT = 8
-SEARCH_SUGGESTIONS_CACHE_TTL = 120   # seconds
+SEARCH_SUGGESTIONS_CACHE_TTL = 120  # seconds
 RECENT_ARTICLES_COUNT = 10
-MAX_ATTACHMENT_SIZE_MB = 20
+
+MAX_ATTACHMENT_SIZE_MB = 25
+MAX_DOCUMENT_SIZE_MB = 50  # For SOW, Requirements, As-Built, Admin Guide uploads
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = MAX_DOCUMENT_SIZE_MB * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_DOCUMENT_SIZE_MB * 1024 * 1024
+
 
 ALLOWED_ATTACHMENT_TYPES = [
     "application/pdf",
@@ -205,8 +221,6 @@ ALLOWED_ATTACHMENT_TYPES = [
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ]
 
-DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_ATTACHMENT_SIZE_MB * 1024 * 1024
-FILE_UPLOAD_MAX_MEMORY_SIZE = MAX_ATTACHMENT_SIZE_MB * 1024 * 1024
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -216,6 +230,12 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # ─────────────────────────────────────────────────────────────────────────────
 # LOGGING
