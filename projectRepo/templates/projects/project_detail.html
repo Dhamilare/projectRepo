@@ -1,0 +1,650 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.project_code }} — {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6"
+     x-data="{
+        activeTab: 'documents',
+        bookmarked: {{ is_bookmarked|yesno:'true,false' }},
+        checklistProgress: {{ project.checklist_progress_percent }},
+        showUploadModal: false,
+        selectedDocType: 'sow',
+        toggleBookmark() {
+            fetch('{% url 'toggle_project_bookmark' project.slug %}', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' }
+            })
+            .then(res => res.json())
+            .then(data => { if (data.success) this.bookmarked = data.bookmarked; });
+        },
+        openUpload(docType) {
+            this.selectedDocType = docType;
+            const selectEl = document.getElementById('id_document_type');
+            if (selectEl) selectEl.value = docType;
+            this.showUploadModal = true;
+        }
+     }"
+     x-init="
+        if (window.location.hash === '#activities') activeTab = 'activities';
+        else if (window.location.hash === '#support') activeTab = 'support';
+        else if (window.location.hash === '#comments') activeTab = 'comments';
+        else if (window.location.hash === '#access') activeTab = 'access';
+     ">
+
+    <!-- Project Header Card -->
+    <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div class="space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-mono font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-0.5 rounded">{{ project.project_code }}</span>
+                    <span class="text-3xs font-extrabold uppercase tracking-wider text-white px-2.5 py-1 rounded" style="background-color: {{ project.category.color_hex|default:'#2563EB' }};">{{ project.category.name }}</span>
+                    <span class="text-3xs font-bold px-2.5 py-1 rounded border border-slate-200 bg-slate-50 text-slate-700">{{ project.get_status_display }}</span>
+                    <span class="text-3xs font-bold px-2.5 py-1 rounded border border-slate-200 bg-slate-50 text-slate-500">{{ project.get_visibility_display }}</span>
+                </div>
+
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ project.title }}</h1>
+                {% if project.summary %}
+                <p class="text-xs text-slate-600 leading-relaxed max-w-3xl">{{ project.summary }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 shrink-0 text-xs font-bold">
+                <button type="button" @click="toggleBookmark()"
+                        :class="bookmarked ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                        class="px-3 py-2 rounded-lg border transition-colors">
+                    <span x-text="bookmarked ? '★ Bookmarked' : '☆ Bookmark'"></span>
+                </button>
+
+                {% if can_edit %}
+                <a href="{% url 'project_edit' project.slug %}" class="px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100">
+                    Edit Project
+                </a>
+                {% endif %}
+
+                {% if can_delete %}
+                <form method="POST" action="{% url 'project_delete' project.slug %}" onsubmit="return confirm('Permanently delete project {{ project.project_code }} and all its documents?');" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100">Delete</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Metadata Strip -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 pt-4 border-t border-slate-100 text-xs">
+            <div><p class="text-3xs uppercase font-bold text-slate-400">Client / Unit</p><p class="font-bold text-slate-800 mt-0.5">{{ project.client_or_unit|default:"Internal" }}</p></div>
+            <div><p class="text-3xs uppercase font-bold text-slate-400">Project Lead</p><p class="font-bold text-slate-800 mt-0.5">{{ project.project_lead.full_name|default:"Unassigned" }}</p></div>
+            <div><p class="text-3xs uppercase font-bold text-slate-400">Start Date</p><p class="font-bold text-slate-800 mt-0.5">{{ project.start_date|date:"M d, Y"|default:"TBD" }}</p></div>
+            <div><p class="text-3xs uppercase font-bold text-slate-400">Target End</p><p class="font-bold text-slate-800 mt-0.5">{{ project.target_end_date|date:"M d, Y"|default:"TBD" }}</p></div>
+            <div>
+                <p class="text-3xs uppercase font-bold text-slate-400">Doc Compliance</p>
+                <p class="font-extrabold mt-0.5 {% if project.document_compliance_percent == 100 %}text-emerald-600{% else %}text-amber-600{% endif %}">
+                    {{ project.document_compliance_percent }}% (4 Core Docs)
+                </p>
+            </div>
+            <div>
+                <p class="text-3xs uppercase font-bold text-slate-400">Checklist Progress</p>
+                <p class="font-extrabold text-blue-600 mt-0.5"><span x-text="checklistProgress"></span>% Complete</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workspace Navigation Tabs -->
+    <div class="flex items-center space-x-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm overflow-x-auto text-xs font-bold">
+        <button @click="activeTab = 'documents'" :class="activeTab === 'documents' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'" class="px-4 py-2 rounded-lg transition-all whitespace-nowrap">
+            Required Documents ({{ project.document_compliance_percent }}%)
+        </button>
+        <button @click="activeTab = 'activities'" :class="activeTab === 'activities' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'" class="px-4 py-2 rounded-lg transition-all whitespace-nowrap">
+            Action Plan &amp; Checklist ({{ project.activities.count }})
+        </button>
+        <button @click="activeTab = 'support'" :class="activeTab === 'support' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'" class="px-4 py-2 rounded-lg transition-all whitespace-nowrap">
+            Linked Support Fixes ({{ related_support_articles.count }})
+        </button>
+        <button @click="activeTab = 'comments'" :class="activeTab === 'comments' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'" class="px-4 py-2 rounded-lg transition-all whitespace-nowrap">
+            Collaboration &amp; Files
+        </button>
+        <button @click="activeTab = 'access'" :class="activeTab === 'access' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'" class="px-4 py-2 rounded-lg transition-all whitespace-nowrap">
+            Team &amp; Permissions
+        </button>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB 1: MANDATORY PROJECT DOCUMENTS (SOW, REQ, AS-BUILT, ADMIN GUIDE) -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <div id="documents" x-show="activeTab === 'documents'" class="space-y-6">
+
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-tight">Mandatory Project Deliverables</h2>
+                <p class="text-xs text-slate-500">Pre-Implementation (SOW &amp; Requirements) and Post-Implementation (As-Built &amp; Admin Guide)</p>
+            </div>
+            {% if can_upload_docs %}
+            <button type="button" @click="openUpload('sow')" class="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm self-start">
+                + Upload Project Document
+            </button>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for slot in mandatory_slots %}
+            <div class="bg-white border {% if slot.latest %}border-slate-200{% else %}border-dashed border-amber-300 bg-amber-50/20{% endif %} rounded-xl p-5 shadow-sm flex flex-col justify-between space-y-4">
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-3xs font-extrabold uppercase tracking-wider px-2 py-0.5 rounded
+                            {% if slot.phase == 'Pre-Implementation' %}bg-indigo-50 text-indigo-700 border border-indigo-200
+                            {% else %}bg-teal-50 text-teal-700 border border-teal-200{% endif %}">
+                            {{ slot.phase }}
+                        </span>
+
+                        {% if slot.latest %}
+                        <span class="text-3xs font-bold px-2 py-0.5 rounded border
+                            {% if slot.latest.status == 'approved' %}bg-emerald-50 text-emerald-700 border-emerald-200
+                            {% elif slot.latest.status == 'in_review' %}bg-amber-50 text-amber-700 border-amber-200
+                            {% else %}bg-slate-100 text-slate-600 border-slate-200{% endif %}">
+                            v{{ slot.latest.version }} &bull; {{ slot.latest.get_status_display }}
+                        </span>
+                        {% else %}
+                        <span class="text-3xs font-bold px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Missing</span>
+                        {% endif %}
+                    </div>
+
+                    <h3 class="text-sm font-extrabold text-slate-900">{{ slot.label }}</h3>
+                    <p class="text-xs text-slate-500">{{ slot.description }}</p>
+
+                    {% if slot.latest %}
+                    <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-1">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-bold text-slate-800 truncate">{{ slot.latest.original_name }}</span>
+                            <span class="text-3xs font-mono text-slate-500 shrink-0">{{ slot.latest.file_size_human }}</span>
+                        </div>
+                        <p class="text-3xs text-slate-400">
+                            Uploaded by {{ slot.latest.uploaded_by.full_name|default:"System" }} on {{ slot.latest.created_at|date:"M d, Y" }}
+                        </p>
+                        {% if slot.latest.change_notes %}
+                        <p class="text-3xs text-slate-600 italic">"{{ slot.latest.change_notes }}"</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="space-y-3 pt-2 border-t border-slate-100">
+                    <div class="flex flex-wrap items-center gap-2">
+                        {% if slot.latest %}
+                        <a href="{% url 'project_document_download' project.slug slot.latest.pk %}" class="px-3 py-1.5 bg-slate-800 text-white text-2xs font-bold rounded-lg hover:bg-slate-900">
+                            Download Latest
+                        </a>
+                        {% endif %}
+                        {% if can_upload_docs %}
+                        <button type="button" @click="openUpload('{{ slot.type }}')" class="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 text-2xs font-bold rounded-lg hover:bg-blue-100">
+                            {% if slot.latest %}Upload New Version{% else %}Upload Now{% endif %}
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Review Approval Bar (for Leads & Admins when document is In Review) -->
+                    {% if slot.latest and can_approve_docs and slot.latest.status == 'in_review' %}
+                    <form method="POST" action="{% url 'project_document_review' project.slug slot.latest.pk %}" class="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                        {% csrf_token %}
+                        <p class="text-3xs font-extrabold uppercase text-amber-800">Document Awaiting Approval</p>
+                        <input type="text" name="review_notes" placeholder="Optional approval or revision remarks..." class="w-full px-2.5 py-1.5 bg-white border border-amber-200 rounded text-xs">
+                        <div class="flex items-center space-x-2">
+                            <button type="submit" name="decision" value="approved" class="px-3 py-1 bg-emerald-600 text-white text-3xs font-bold rounded hover:bg-emerald-700">Approve</button>
+                            <button type="submit" name="decision" value="draft" class="px-3 py-1 bg-white border border-red-300 text-red-700 text-3xs font-bold rounded hover:bg-red-50">Return for Revision</button>
+                        </div>
+                    </form>
+                    {% endif %}
+
+                    <!-- Version History Accordion -->
+                    {% if slot.history.count > 1 %}
+                    <details class="text-3xs text-slate-500">
+                        <summary class="cursor-pointer font-bold hover:text-blue-600">View all {{ slot.history.count }} versions</summary>
+                        <div class="mt-2 space-y-1 pl-2 border-l border-slate-200">
+                            {% for ver in slot.history %}
+                            <div class="flex items-center justify-between py-0.5">
+                                <span>v{{ ver.version }} ({{ ver.get_status_display }}) — {{ ver.created_at|date:"M d, Y" }}</span>
+                                <a href="{% url 'project_document_download' project.slug ver.pk %}" class="text-blue-600 font-bold hover:underline">Download</a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </details>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Supporting Documents -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Additional Supporting Documents</h3>
+                {% if can_upload_docs %}
+                <button type="button" @click="openUpload('supporting')" class="text-xs font-bold text-blue-600 hover:underline">+ Add Supporting Doc</button>
+                {% endif %}
+            </div>
+            {% if supporting_docs %}
+            <div class="divide-y divide-slate-100">
+                {% for sdoc in supporting_docs %}
+                <div class="py-2.5 flex items-center justify-between text-xs">
+                    <div>
+                        <p class="font-bold text-slate-800">{{ sdoc.title }} <span class="text-3xs text-slate-400 font-normal">(v{{ sdoc.version }})</span></p>
+                        <p class="text-3xs text-slate-400">{{ sdoc.original_name }} &bull; {{ sdoc.file_size_human }} &bull; Uploaded by {{ sdoc.uploaded_by.full_name|default:"System" }}</p>
+                    </div>
+                    <a href="{% url 'project_document_download' project.slug sdoc.pk %}" class="px-3 py-1 bg-slate-100 text-slate-700 rounded font-bold text-3xs hover:bg-slate-200">Download</a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-xs text-slate-400">No additional supporting documents uploaded.</p>
+            {% endif %}
+        </div>
+
+        <!-- Scope & Technical Overview -->
+        {% if project.scope_notes or project.prerequisites %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% if project.scope_notes %}
+            <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-2">
+                <h3 class="text-3xs font-extrabold uppercase tracking-widest text-slate-400">Scope &amp; Boundaries</h3>
+                <p class="text-xs text-slate-700 whitespace-pre-line leading-relaxed">{{ project.scope_notes }}</p>
+            </div>
+            {% endif %}
+            {% if project.prerequisites %}
+            <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-2">
+                <h3 class="text-3xs font-extrabold uppercase tracking-widest text-slate-400">Prerequisites &amp; Tech Stack</h3>
+                <p class="text-xs text-slate-700 whitespace-pre-line leading-relaxed">{{ project.prerequisites }}</p>
+                {% if project.microsoft_products %}
+                <p class="text-3xs text-blue-700 font-bold pt-1">Products: {{ project.microsoft_products }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB 2: PROJECT ACTIVITIES (STEPS / ACTION PLAN / CHECKLIST)          -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <div id="activities" x-show="activeTab === 'activities'" style="display: none;" class="space-y-6">
+
+        <!-- Checklist Progress Header -->
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-tight">Implementation Action Plan &amp; Checklist</h2>
+                    <p class="text-xs text-slate-500">Engineers can execute steps, toggle completion live, and attach step-level screenshots or scripts.</p>
+                </div>
+                <span class="text-sm font-extrabold text-blue-600"><span x-text="checklistProgress"></span>%</span>
+            </div>
+            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-blue-600 transition-all duration-300" :style="'width: ' + checklistProgress + '%'"></div>
+            </div>
+        </div>
+
+        <!-- Activity Steps List -->
+        <div class="space-y-4">
+            {% for act in project.activities.all %}
+            <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-3"
+                 x-data="{
+                    isDone: {{ act.status|yesno:'false,false' }} === 'completed' || '{{ act.status }}' === 'completed',
+                    statusLabel: '{{ act.get_status_display }}',
+                    completedBy: '{{ act.completed_by.full_name|default:'' }}',
+                    toggleStep() {
+                        fetch('{% url 'project_activity_toggle' project.slug act.pk %}', {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' }
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                this.isDone = (data.status === 'completed');
+                                this.statusLabel = data.status_label;
+                                this.completedBy = data.completed_by || '';
+                                checklistProgress = data.checklist_progress;
+                            }
+                        });
+                    }
+                 }">
+
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div class="flex items-start sm:items-center space-x-3">
+                        {% if can_edit %}
+                        <button type="button" @click="toggleStep()"
+                                :class="isDone ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-300 text-transparent hover:border-blue-500'"
+                                class="h-6 w-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        </button>
+                        {% endif %}
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-3xs font-mono font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded">Step {{ act.step_number }}</span>
+                                <span class="text-3xs font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{{ act.get_phase_display }}</span>
+                                <span :class="isDone ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'"
+                                      class="text-3xs font-bold px-2 py-0.5 rounded border" x-text="statusLabel"></span>
+                                {% if act.is_optional %}<span class="text-3xs text-slate-400 font-bold">(Optional)</span>{% endif %}
+                            </div>
+                            <h3 class="text-sm font-bold text-slate-900 mt-1" :class="isDone ? 'line-through text-slate-400' : ''">{{ act.title }}</h3>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2 text-3xs shrink-0">
+                        {% if act.assigned_to %}
+                        <span class="bg-slate-100 text-slate-700 px-2 py-1 rounded font-bold">Assigned: {{ act.assigned_to.full_name }}</span>
+                        {% endif %}
+                        {% if can_edit %}
+                        <a href="{% url 'project_activity_edit' project.slug act.pk %}" class="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded font-bold hover:bg-blue-100">Edit</a>
+                        {% endif %}
+                        {% if can_manage_members %}
+                        <form method="POST" action="{% url 'project_activity_delete' project.slug act.pk %}" onsubmit="return confirm('Remove this step?');" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 rounded font-bold hover:bg-red-100">Remove</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-700 whitespace-pre-line leading-relaxed">{{ act.description }}</p>
+
+                {% if act.code_snippet %}
+                <div class="relative bg-slate-50 border border-slate-200 text-slate-800 p-4 pt-9 rounded-lg font-mono text-xs overflow-x-auto"
+                     x-data="{ copied: false }">
+                    <div class="absolute top-2 left-3 right-3 flex items-center justify-between border-b border-slate-200 pb-1.5">
+                        <span class="text-3xs uppercase font-sans font-bold text-slate-500">{{ act.code_language|default:"PowerShell / CLI" }}</span>
+                        <button type="button" @click="navigator.clipboard.writeText($refs.actCode.innerText); copied = true; setTimeout(() => copied = false, 2000)"
+                                class="text-3xs font-sans font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600 hover:text-blue-600">
+                            <span x-text="copied ? '✓ Copied' : 'Copy'"></span>
+                        </button>
+                    </div>
+                    <pre><code x-ref="actCode">{{ act.code_snippet }}</code></pre>
+                </div>
+                {% endif %}
+
+                {% if act.expected_outcome %}
+                <div class="text-2xs bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-lg">
+                    <strong>Expected Outcome:</strong> {{ act.expected_outcome }}
+                </div>
+                {% endif %}
+                {% if act.warning %}
+                <div class="text-2xs bg-red-50 border border-red-200 text-red-800 p-2.5 rounded-lg">
+                    <strong>⚠ Warning:</strong> {{ act.warning }}
+                </div>
+                {% endif %}
+                {% if act.tip %}
+                <div class="text-2xs bg-blue-50 border border-blue-200 text-blue-800 p-2.5 rounded-lg">
+                    <strong>💡 Tip:</strong> {{ act.tip }}
+                </div>
+                {% endif %}
+
+                {% if act.attachments.exists %}
+                <div class="flex flex-wrap gap-2 pt-1">
+                    {% for aatt in act.attachments.all %}
+                    <a href="{% url 'download_attachment' aatt.pk %}" target="_blank" class="inline-flex items-center px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-3xs font-bold text-blue-700 hover:bg-blue-50">
+                        📎 {{ aatt.original_name }} ({{ aatt.file_size_human }})
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <p x-show="completedBy" class="text-3xs text-emerald-700 font-bold">
+                    ✓ Completed by <span x-text="completedBy"></span>
+                </p>
+            </div>
+            {% empty %}
+            <div class="text-center py-12 bg-white border border-dashed border-slate-200 rounded-xl text-xs text-slate-400">
+                No action plan steps defined yet. Add the first implementation step below.
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Add New Activity Form (Engineers, Leads, Admins) -->
+        {% if can_edit %}
+        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">+ Add Action Plan / Checklist Step</h3>
+            <form method="POST" action="{% url 'project_activity_create' project.slug %}" enctype="multipart/form-data" class="space-y-4 text-xs">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Step # (Auto if blank)</label>{{ activity_form.step_number }}</div>
+                    <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Phase</label>{{ activity_form.phase }}</div>
+                    <div class="space-y-1 md:col-span-2"><label class="text-3xs font-bold uppercase text-slate-500">Step Title</label>{{ activity_form.title }}</div>
+                </div>
+                <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Instructions</label>{{ activity_form.description }}</div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="space-y-1 md:col-span-3"><label class="text-3xs font-bold uppercase text-slate-500">Code / Script Snippet</label>{{ activity_form.code_snippet }}</div>
+                    <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Language</label>{{ activity_form.code_language }}</div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Assign To</label>{{ activity_form.assigned_to }}</div>
+                    <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Due Date</label>{{ activity_form.due_date }}</div>
+                    <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Est. Minutes</label>{{ activity_form.estimated_minutes }}</div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Expected Outcome</label>{{ activity_form.expected_outcome }}</div>
+                    <div class="space-y-1"><label class="text-3xs font-bold uppercase text-red-600">Warning</label>{{ activity_form.warning }}</div>
+                    <div class="space-y-1"><label class="text-3xs font-bold uppercase text-blue-600">Tip</label>{{ activity_form.tip }}</div>
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+                    <input type="file" name="attachments" multiple class="text-2xs text-slate-500">
+                    <button type="submit" class="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-sm">
+                        Add Step to Action Plan
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB 3: LINKED SUPPORT RESOLUTIONS                                    -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <div id="support" x-show="activeTab === 'support'" style="display: none;" class="space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-tight">Linked Support Resolutions &amp; Runbooks</h2>
+                <p class="text-xs text-slate-500">Known errors, troubleshooting steps, and operational guides tied to this project.</p>
+            </div>
+            {% if request.user.can_edit_content %}
+            <a href="{% url 'article_create' %}?type=support&project={{ project.slug }}" class="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-lg hover:bg-amber-700 shadow-sm">
+                + Log Support Fix for Project
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="space-y-3">
+            {% for art in related_support_articles %}
+            <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex items-center justify-between hover:border-blue-300 transition-all">
+                <div class="space-y-1">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-3xs font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 uppercase">{{ art.get_article_type_display }}</span>
+                        {% if art.error_codes %}<span class="text-3xs font-mono bg-red-50 text-red-700 px-2 py-0.5 rounded">{{ art.error_codes }}</span>{% endif %}
+                    </div>
+                    <a href="{{ art.get_absolute_url }}" class="block text-sm font-bold text-slate-800 hover:text-blue-600">{{ art.title }}</a>
+                    <p class="text-xs text-slate-500">{{ art.summary }}</p>
+                </div>
+                <span class="text-3xs font-bold text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded">{{ art.views_count }} views</span>
+            </div>
+            {% empty %}
+            <div class="text-center py-12 bg-white border border-dashed border-slate-200 rounded-xl text-xs text-slate-400">
+                No support resolutions linked to this project yet.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB 4: COLLABORATION FEED & PROJECT ATTACHMENTS                      -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <div id="comments" x-show="activeTab === 'comments'" style="display: none;" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <div class="lg:col-span-2 bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-5">
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-2">Engineering Collaboration Feed</h3>
+
+            <div class="space-y-4">
+                {% for comment in project.comments.all %}
+                <div class="p-4 {% if comment.is_resolution_note %}bg-emerald-50/50 border-emerald-200{% else %}bg-slate-50 border-slate-200{% endif %} border rounded-xl space-y-2">
+                    <div class="flex items-center justify-between text-3xs font-bold">
+                        <span class="text-slate-800">{{ comment.author.full_name }} <span class="text-slate-400 font-normal">({{ comment.author.get_role_display }})</span></span>
+                        <span class="text-slate-400 font-normal">{{ comment.created_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                    <p class="text-xs text-slate-700 whitespace-pre-line">{{ comment.content|safe }}</p>
+                    {% if comment.attachments.exists %}
+                    <div class="flex flex-wrap gap-2">
+                        {% for catt in comment.attachments.all %}
+                        <a href="{% url 'download_attachment' catt.pk %}" target="_blank" class="text-3xs font-bold text-blue-700 bg-white border border-slate-200 px-2 py-1 rounded">
+                            📎 {{ catt.original_name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <p class="text-xs text-slate-400 py-4 text-center">No project updates posted yet.</p>
+                {% endfor %}
+            </div>
+
+            {% if request.user.role != 'viewer' %}
+            <form method="POST" action="{% url 'add_project_comment' project.slug %}" enctype="multipart/form-data" class="space-y-3 pt-4 border-t border-slate-100">
+                {% csrf_token %}
+                {{ comment_form.content }}
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <label class="inline-flex items-center space-x-2 text-xs font-bold text-slate-600 cursor-pointer">
+                        {{ comment_form.is_resolution_note }} <span>Highlight as milestone / resolution update</span>
+                    </label>
+                    <input type="file" name="attachments" multiple class="text-2xs text-slate-500">
+                </div>
+                <button type="submit" class="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-900">Post Update</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <!-- Project-Level Screenshots & Attachments -->
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-4">
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 border-b border-slate-100 pb-2">Project Screenshots &amp; Files</h3>
+            <div class="space-y-3">
+                {% for att in project.attachments.all %}
+                <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+                    {% if att.is_image %}
+                    <a href="{% url 'download_attachment' att.pk %}" target="_blank" class="block rounded overflow-hidden border border-slate-200 bg-white">
+                        <img src="{% url 'download_attachment' att.pk %}" alt="{{ att.original_name }}" class="w-full h-32 object-cover">
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'download_attachment' att.pk %}" target="_blank" class="flex items-center justify-between text-xs">
+                        <span class="font-bold text-blue-700 truncate pr-2">{{ att.original_name }}</span>
+                        <span class="text-3xs font-mono text-slate-500 shrink-0">{{ att.file_size_human }}</span>
+                    </a>
+                </div>
+                {% empty %}
+                <p class="text-xs text-slate-400">No project attachments uploaded.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB 5: SCOPED ACCESS & PROJECT MEMBERS                               -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <div id="access" x-show="activeTab === 'access'" style="display: none;" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <div class="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-800">Project Access Members</h3>
+                    <p class="text-3xs text-slate-500 mt-0.5">Visibility Mode: <strong>{{ project.get_visibility_display }}</strong> &bull; Open Collaboration: <strong>{{ project.allow_open_collaboration|yesno:"Enabled,Disabled" }}</strong></p>
+                </div>
+            </div>
+            <table class="min-w-full divide-y divide-slate-100 text-xs text-left">
+                <thead class="bg-slate-50 text-3xs uppercase font-extrabold text-slate-500">
+                    <tr>
+                        <th class="px-5 py-3">User</th>
+                        <th class="px-5 py-3">Project Role</th>
+                        <th class="px-5 py-3">Doc Rights</th>
+                        {% if can_manage_members %}<th class="px-5 py-3 text-right">Action</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for m in project.memberships.all %}
+                    <tr>
+                        <td class="px-5 py-3">
+                            <p class="font-bold text-slate-800">{{ m.user.full_name }}</p>
+                            <p class="text-3xs text-slate-400">{{ m.user.email }}</p>
+                        </td>
+                        <td class="px-5 py-3 font-bold text-slate-700">{{ m.get_role_display }}</td>
+                        <td class="px-5 py-3 text-3xs text-slate-500">
+                            {% if m.can_upload_docs %}Upload{% endif %}{% if m.can_upload_docs and m.can_approve_docs %} / {% endif %}{% if m.can_approve_docs %}Approve{% endif %}
+                        </td>
+                        {% if can_manage_members %}
+                        <td class="px-5 py-3 text-right">
+                            <form method="POST" action="{% url 'project_member_remove' project.slug m.pk %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="text-red-600 font-bold hover:underline">Remove</button>
+                            </form>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="px-5 py-6 text-center text-slate-400">No explicit project members assigned.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="space-y-4">
+            {% if project.allowed_teams.exists %}
+            <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-2">
+                <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Authorized Teams</h4>
+                <div class="flex flex-wrap gap-1.5">
+                    {% for t in project.allowed_teams.all %}
+                    <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-2xs font-bold">{{ t.name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if can_manage_members %}
+            <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-3 text-xs">
+                <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">Grant / Update Member Access</h4>
+                <form method="POST" action="{% url 'project_member_manage' project.slug %}" class="space-y-3">
+                    {% csrf_token %}
+                    <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">User</label>{{ member_form.user }}</div>
+                    <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Role</label>{{ member_form.role }}</div>
+                    <label class="flex items-center space-x-2 text-xs font-bold text-slate-600 cursor-pointer">{{ member_form.can_upload_docs }} <span>Can Upload Deliverables</span></label>
+                    <label class="flex items-center space-x-2 text-xs font-bold text-slate-600 cursor-pointer">{{ member_form.can_approve_docs }} <span>Can Approve Deliverables</span></label>
+                    <button type="submit" class="w-full py-2 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900">Save Access</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- UPLOAD DELIVERABLE MODAL                                             -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    {% if can_upload_docs %}
+    <div x-show="showUploadModal" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div @click.away="showUploadModal = false" class="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-sm font-extrabold text-slate-900">Upload Project Document</h3>
+                <button type="button" @click="showUploadModal = false" class="text-slate-400 hover:text-slate-600 font-bold">&times;</button>
+            </div>
+
+            <form method="POST" action="{% url 'project_document_upload' project.slug %}" enctype="multipart/form-data" class="space-y-4 text-xs">
+                {% csrf_token %}
+                <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Document Type</label>{{ doc_upload_form.document_type }}</div>
+                <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Document Title</label>{{ doc_upload_form.title }}</div>
+                <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">File (PDF, DOCX, XLSX, PPTX, TXT, ZIP)</label>{{ doc_upload_form.file }}</div>
+                <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Workflow Status</label>{{ doc_upload_form.status }}</div>
+                <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Version / Change Notes</label>{{ doc_upload_form.change_notes }}</div>
+
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button" @click="showUploadModal = false" class="px-4 py-2 bg-white border border-slate-200 rounded-lg font-bold text-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-sm">Upload Document</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

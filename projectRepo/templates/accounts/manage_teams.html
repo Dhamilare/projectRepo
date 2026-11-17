@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Engineering Teams{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
+        <div>
+            <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Engineering Teams</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Group engineers into teams to scope access on Team-restricted projects and articles.</p>
+        </div>
+        <div class="flex items-center space-x-2 text-xs">
+            <a href="{% url 'access_control_matrix' %}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50">Users &amp; Roles</a>
+            <a href="{% url 'manage_teams' %}" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-bold shadow-sm">Teams</a>
+            <a href="{% url 'audit_log_list' %}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50">Audit Logs</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Create Team Form -->
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-4 text-xs h-fit">
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">Create Engineering Team</h3>
+            <form method="POST" action="{% url 'manage_teams' %}" class="space-y-3">
+                {% csrf_token %}
+                <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Team Name</label>{{ form.name }}</div>
+                <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Description</label>{{ form.description }}</div>
+                <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Team Lead</label>{{ form.lead }}</div>
+                <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Members</label>{{ form.members }}</div>
+                <label class="inline-flex items-center space-x-2 font-bold text-slate-600 cursor-pointer">{{ form.is_active }} <span>Active</span></label>
+                <button type="submit" class="w-full py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-sm">Create Team</button>
+            </form>
+        </div>
+
+        <!-- Existing Teams List -->
+        <div class="lg:col-span-2 space-y-3">
+            {% for team in teams %}
+            <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm space-y-3">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <h3 class="text-sm font-extrabold text-slate-900">{{ team.name }}</h3>
+                        <p class="text-xs text-slate-500 mt-0.5">{{ team.description|default:"No description." }}</p>
+                    </div>
+                    <span class="text-3xs font-bold px-2.5 py-0.5 rounded-full {% if team.is_active %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-slate-100 text-slate-500{% endif %}">
+                        {{ team.is_active|yesno:"Active,Inactive" }}
+                    </span>
+                </div>
+                <div class="text-xs text-slate-600">
+                    <strong>Lead:</strong> {{ team.lead.full_name|default:"Unassigned" }}
+                </div>
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    {% for m in team.members.all %}
+                    <span class="text-3xs font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md border border-slate-200">{{ m.full_name }}</span>
+                    {% empty %}
+                    <span class="text-3xs text-slate-400">No members assigned.</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-12 bg-white border border-dashed border-slate-200 rounded-xl text-xs text-slate-400">
+                No teams configured yet.
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

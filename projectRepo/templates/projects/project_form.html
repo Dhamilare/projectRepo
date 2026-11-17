@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_create %}Create Project{% else %}Edit {{ project.project_code }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <div class="border-b border-slate-200 pb-4">
+        <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">
+            {% if is_create %}Create New Enterprise Project{% else %}Edit Project: {{ project.project_code }} — {{ project.title }}{% endif %}
+        </h1>
+        <p class="text-xs text-slate-500 mt-0.5">Define project scope, assign ownership &amp; team permissions, then upload SOW, Requirements, As-Built, and Admin Guide deliverables.</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-6" novalidate>
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-700 space-y-1">
+            <p class="font-extrabold text-red-800">Please fix the errors below:</p>
+            <ul class="list-disc list-inside">
+                {% for field, errors in form.errors.items %}
+                <li><strong>{{ field }}</strong>: {{ errors.0 }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Project Identification</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Project Code</label>{{ form.project_code }}</div>
+                <div class="space-y-1 md:col-span-2"><label class="text-3xs font-extrabold uppercase text-slate-500">Project Title</label>{{ form.title }}</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Client / Business Unit</label>{{ form.client_or_unit }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Category</label>{{ form.category }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Tags</label>{{ form.tag_names }}</div>
+            </div>
+
+            <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Executive Summary</label>{{ form.summary }}</div>
+            <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Scope &amp; Out-of-Scope Notes</label>{{ form.scope_notes }}</div>
+        </div>
+
+        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Technical Stack &amp; Timeline</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Microsoft Products</label>{{ form.microsoft_products }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Tech Stack</label>{{ form.tech_stack }}</div>
+            </div>
+            <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Prerequisites</label>{{ form.prerequisites }}</div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Lifecycle Phase</label>{{ form.status }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Priority</label>{{ form.priority }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Start Date</label>{{ form.start_date }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Target End Date</label>{{ form.target_end_date }}</div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+            <h2 class="text-2xs font-extrabold uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Ownership, Permissions &amp; Attachments</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Project Lead</label>{{ form.project_lead }}</div>
+                <div class="space-y-1"><label class="text-3xs font-extrabold uppercase text-slate-500">Visibility Scope</label>{{ form.visibility }}</div>
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-3xs font-extrabold uppercase text-slate-500">Allowed Teams (if Team-scoped)</label>
+                {{ form.allowed_teams }}
+            </div>
+
+            <label class="inline-flex items-center space-x-2 text-xs font-bold text-slate-600 cursor-pointer">
+                {{ form.allow_open_collaboration }}
+                <span>Allow engineers with view access to collaborate on checklists &amp; document uploads</span>
+            </label>
+
+            <div class="space-y-1 pt-2">
+                <label class="text-3xs font-extrabold uppercase text-slate-500">Attach Screenshots or Reference Files (Optional)</label>
+                <input type="file" name="attachments" multiple class="w-full text-xs text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 border border-dashed border-slate-300 p-4 rounded-xl bg-slate-50 cursor-pointer">
+            </div>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-2">
+            <a href="{% if project %}{{ project.get_absolute_url }}{% else %}{% url 'project_list' %}{% endif %}" class="px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50">Cancel</a>
+            <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 shadow-sm">
+                {% if is_create %}Create Project{% else %}Save Changes{% endif %}
+            </button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}Project Repository{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
+        <div>
+            <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Project Repository</h1>
+            <p class="text-xs text-slate-500 mt-0.5">
+                Showing {{ total_results }} accessible project{{ total_results|pluralize }} &bull; Tracking SOW, Requirements, As-Built &amp; Admin Guide deliverables
+            </p>
+        </div>
+
+        {% if request.user.can_edit_content %}
+        <a href="{% url 'project_create' %}" class="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm self-start sm:self-auto transition-all">
+            <svg class="w-3.5 h-3.5 mr-1.5 stroke-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            New Project
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Filter Bar -->
+    <form method="GET" action="{% url 'project_list' %}" class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+        <div class="lg:col-span-2 space-y-1">
+            <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Search Projects</label>
+            <input type="search" name="q" value="{{ q }}" placeholder="Code, title, client, product..."
+                   class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+        </div>
+
+        <div class="space-y-1">
+            <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Status</label>
+            <select name="status" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                <option value="">All Active</option>
+                {% for val, label in status_choices %}
+                <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="space-y-1">
+            <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Category</label>
+            <select name="category" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.slug }}" {% if category_param == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="space-y-1">
+            <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Doc Compliance</label>
+            <select name="compliance" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                <option value="">All</option>
+                <option value="incomplete" {% if compliance_filter == 'incomplete' %}selected{% endif %}>Missing Required Docs</option>
+                <option value="complete" {% if compliance_filter == 'complete' %}selected{% endif %}>100% Compliant (4/4)</option>
+            </select>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <button type="submit" class="flex-1 py-2 px-4 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-900 transition-colors">
+                Filter
+            </button>
+            <a href="{% url 'project_list' %}" class="py-2 px-3 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors">
+                Reset
+            </a>
+        </div>
+    </form>
+
+    <!-- Project Cards -->
+    <div class="space-y-3">
+        {% for proj in page_obj %}
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:border-blue-300 transition-all border-l-4"
+             style="border-left-color: {{ proj.category.color_hex|default:'#2563EB' }};">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+                <div class="space-y-1.5 min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-3xs font-mono font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded">{{ proj.project_code }}</span>
+                        <span class="text-3xs font-extrabold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{{ proj.category.name }}</span>
+                        <span class="text-3xs font-bold px-2 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-600">{{ proj.get_status_display }}</span>
+                        <span class="text-3xs font-bold px-2 py-0.5 rounded border
+                            {% if proj.priority == 'critical' %}bg-red-50 text-red-700 border-red-200
+                            {% elif proj.priority == 'high' %}bg-amber-50 text-amber-700 border-amber-200
+                            {% else %}bg-slate-50 text-slate-500 border-slate-200{% endif %}">
+                            {{ proj.get_priority_display }}
+                        </span>
+                        <span class="text-3xs font-bold text-slate-400">{{ proj.get_visibility_display }}</span>
+                    </div>
+
+                    <a href="{{ proj.get_absolute_url }}" class="block text-base font-extrabold text-slate-900 hover:text-blue-600 transition-colors">
+                        {{ proj.title }}
+                    </a>
+
+                    <p class="text-xs text-slate-500 line-clamp-2">{{ proj.summary|default:"No summary provided." }}</p>
+
+                    <div class="flex flex-wrap items-center gap-4 text-3xs text-slate-400 pt-1">
+                        <span>Client/Unit: <strong class="text-slate-600">{{ proj.client_or_unit|default:"Internal" }}</strong></span>
+                        <span>Lead: <strong class="text-slate-600">{{ proj.project_lead.full_name|default:"Unassigned" }}</strong></span>
+                        {% if proj.target_end_date %}<span>Target: <strong class="text-slate-600">{{ proj.target_end_date|date:"M d, Y" }}</strong></span>{% endif %}
+                    </div>
+                </div>
+
+                <!-- 4 Mandatory Docs Status & Checklist Progress -->
+                <div class="shrink-0 lg:w-64 space-y-2.5 border-t lg:border-t-0 lg:border-l border-slate-100 pt-3 lg:pt-0 lg:pl-5">
+                    <div>
+                        <div class="flex items-center justify-between text-3xs font-bold text-slate-500 mb-1">
+                            <span>Mandatory Deliverables</span>
+                            <span class="{% if proj.document_compliance_percent == 100 %}text-emerald-600{% else %}text-amber-600{% endif %}">
+                                {{ proj.document_compliance_percent }}%
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-1 text-center">
+                            <span class="text-4xs font-bold py-1 rounded border {% if proj.has_sow %}bg-emerald-50 text-emerald-700 border-emerald-200{% else %}bg-slate-50 text-slate-400 border-slate-200{% endif %}">SOW</span>
+                            <span class="text-4xs font-bold py-1 rounded border {% if proj.has_requirements %}bg-emerald-50 text-emerald-700 border-emerald-200{% else %}bg-slate-50 text-slate-400 border-slate-200{% endif %}">REQ</span>
+                            <span class="text-4xs font-bold py-1 rounded border {% if proj.has_as_built %}bg-emerald-50 text-emerald-700 border-emerald-200{% else %}bg-slate-50 text-slate-400 border-slate-200{% endif %}">AS-BUILT</span>
+                            <span class="text-4xs font-bold py-1 rounded border {% if proj.has_admin_guide %}bg-emerald-50 text-emerald-700 border-emerald-200{% else %}bg-slate-50 text-slate-400 border-slate-200{% endif %}">ADMIN</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between text-3xs font-bold text-slate-500 mb-1">
+                            <span>Action Plan Checklist</span>
+                            <span>{{ proj.checklist_progress_percent }}%</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-blue-600 rounded-full" style="width: {{ proj.checklist_progress_percent }}%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-16 border border-dashed border-slate-200 rounded-xl bg-white space-y-2">
+            <p class="text-sm font-bold text-slate-700">No Projects Found</p>
+            <p class="text-xs text-slate-400">Adjust your filters or create a new project to start tracking deliverables and activities.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-between border-t border-slate-200 pt-6 text-xs font-bold text-slate-600">
+        <div>
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">Previous</a>
+            {% endif %}
+        </div>
+        <span class="font-normal text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        <div>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

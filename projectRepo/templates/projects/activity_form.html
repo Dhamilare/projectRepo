@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+    <div class="border-b border-slate-200 pb-4">
+        <span class="text-3xs font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">{{ project.project_code }}</span>
+        <h1 class="text-xl font-extrabold text-slate-900 mt-1">Edit Action Plan Step #{{ activity.step_number }}</h1>
+        <p class="text-xs text-slate-500">{{ project.title }}</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4 text-xs">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700">{{ form.errors }}</div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Step #</label>{{ form.step_number }}</div>
+            <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Phase</label>{{ form.phase }}</div>
+            <div class="space-y-1 md:col-span-2"><label class="text-3xs font-bold uppercase text-slate-500">Title</label>{{ form.title }}</div>
+        </div>
+
+        <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Instructions</label>{{ form.description }}</div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="space-y-1 md:col-span-3"><label class="text-3xs font-bold uppercase text-slate-500">Code / CLI Snippet</label>{{ form.code_snippet }}</div>
+            <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Language</label>{{ form.code_language }}</div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Status</label>{{ form.status }}</div>
+            <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Assigned To</label>{{ form.assigned_to }}</div>
+            <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Due Date</label>{{ form.due_date }}</div>
+            <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Est. Minutes</label>{{ form.estimated_minutes }}</div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="space-y-1"><label class="text-3xs font-bold uppercase text-slate-500">Expected Outcome</label>{{ form.expected_outcome }}</div>
+            <div class="space-y-1"><label class="text-3xs font-bold uppercase text-red-600">Warning</label>{{ form.warning }}</div>
+            <div class="space-y-1"><label class="text-3xs font-bold uppercase text-blue-600">Tip</label>{{ form.tip }}</div>
+        </div>
+
+        <label class="inline-flex items-center space-x-2 font-bold text-slate-600 cursor-pointer">
+            {{ form.is_optional }} <span>Optional step</span>
+        </label>
+
+        <div class="space-y-1 pt-2 border-t border-slate-100">
+            <label class="text-3xs font-bold uppercase text-slate-500">Attach Additional Screenshots / Logs</label>
+            <input type="file" name="attachments" multiple class="w-full text-2xs text-slate-500">
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-2">
+            <a href="{{ project.get_absolute_url }}#activities" class="px-4 py-2 bg-white border border-slate-200 rounded-lg font-bold text-slate-700">Cancel</a>
+            <button type="submit" class="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-sm">Save Step</button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

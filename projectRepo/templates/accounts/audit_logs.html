@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Enterprise Audit Logs{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
+        <div>
+            <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Enterprise Audit Logs</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Immutable security &amp; compliance trail of logins, document uploads, approvals, and permission changes.</p>
+        </div>
+        <div class="flex items-center space-x-2 text-xs">
+            <a href="{% url 'access_control_matrix' %}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50">Users &amp; Roles</a>
+            <a href="{% url 'manage_teams' %}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50">Teams</a>
+            <a href="{% url 'audit_log_list' %}" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-bold shadow-sm">Audit Logs</a>
+        </div>
+    </div>
+
+    <!-- Action Filter -->
+    <form method="GET" class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-wrap items-center gap-3 text-xs">
+        <label class="text-3xs font-extrabold uppercase tracking-wider text-slate-500">Filter by Action:</label>
+        <select name="action" class="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800">
+            <option value="">All Actions</option>
+            {% for val, label in action_choices %}
+            <option value="{{ val }}" {% if action_filter == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="px-4 py-2 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900">Apply</button>
+        <a href="{% url 'audit_log_list' %}" class="px-3 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg">Reset</a>
+    </form>
+
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
+            <thead class="bg-slate-50 text-3xs uppercase tracking-widest font-extrabold text-slate-500">
+                <tr>
+                    <th class="px-5 py-3.5">Timestamp</th>
+                    <th class="px-5 py-3.5">Actor</th>
+                    <th class="px-5 py-3.5">Action</th>
+                    <th class="px-5 py-3.5">Target</th>
+                    <th class="px-5 py-3.5">IP Address</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-slate-700">
+                {% for log in page_obj %}
+                <tr class="hover:bg-slate-50">
+                    <td class="px-5 py-3 font-mono text-3xs text-slate-500 whitespace-nowrap">{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td class="px-5 py-3 font-bold text-slate-800">{{ log.actor.email|default:"System" }}</td>
+                    <td class="px-5 py-3">
+                        <span class="text-3xs font-bold px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700">
+                            {{ log.get_action_display }}
+                        </span>
+                    </td>
+                    <td class="px-5 py-3">
+                        <span class="text-3xs text-slate-400 uppercase font-bold">{{ log.target_type }}</span>
+                        <span class="text-xs text-slate-700 ml-1">{{ log.target_repr }}</span>
+                    </td>
+                    <td class="px-5 py-3 font-mono text-3xs text-slate-500">{{ log.ip_address|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="px-5 py-12 text-center text-slate-400">No audit events recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-between pt-2 text-xs font-bold text-slate-600">
+        <div>{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}{% if action_filter %}&action={{ action_filter }}{% endif %}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg">Previous</a>{% endif %}</div>
+        <span class="font-normal text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        <div>{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}{% if action_filter %}&action={{ action_filter }}{% endif %}" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg">Next</a>{% endif %}</div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

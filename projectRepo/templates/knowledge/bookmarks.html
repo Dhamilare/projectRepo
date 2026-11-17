@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}My Saved Bookmarks{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <div class="border-b border-slate-200 pb-4">
+        <h1 class="text-xl font-extrabold text-slate-900">Saved Bookmarks</h1>
+        <p class="text-xs text-slate-500">Quick-access shortcuts to your frequently referenced Projects and Support Resolutions.</p>
+    </div>
+
+    <div class="space-y-3">
+        {% for bm in bookmarks %}
+            {% if bm.project %}
+            <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex items-center justify-between gap-4">
+                <div class="space-y-1 min-w-0">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-3xs font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">{{ bm.project.project_code }}</span>
+                        <span class="text-3xs font-bold text-slate-500">{{ bm.project.category.name }}</span>
+                    </div>
+                    <a href="{{ bm.project.get_absolute_url }}" class="block text-sm font-bold text-slate-800 hover:text-blue-600 truncate">{{ bm.project.title }}</a>
+                </div>
+                <form method="POST" action="{% url 'toggle_project_bookmark' bm.project.slug %}">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3 py-1.5 bg-slate-50 border border-slate-200 text-3xs font-bold text-slate-600 rounded-lg hover:bg-red-50 hover:text-red-700">Remove</button>
+                </form>
+            </div>
+            {% elif bm.article %}
+            <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex items-center justify-between gap-4">
+                <div class="space-y-1 min-w-0">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-3xs font-bold uppercase bg-amber-50 text-amber-700 px-2 py-0.5 rounded">{{ bm.article.get_article_type_display }}</span>
+                        <span class="text-3xs font-bold text-slate-500">{{ bm.article.category.name }}</span>
+                    </div>
+                    <a href="{{ bm.article.get_absolute_url }}" class="block text-sm font-bold text-slate-800 hover:text-blue-600 truncate">{{ bm.article.title }}</a>
+                </div>
+                <form method="POST" action="{% url 'toggle_article_bookmark' bm.article.slug %}">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3 py-1.5 bg-slate-50 border border-slate-200 text-3xs font-bold text-slate-600 rounded-lg hover:bg-red-50 hover:text-red-700">Remove</button>
+                </form>
+            </div>
+            {% endif %}
+        {% empty %}
+        <div class="text-center py-16 bg-white border border-dashed border-slate-200 rounded-xl text-xs text-slate-400">
+            You haven't bookmarked any projects or support resolutions yet.
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}
